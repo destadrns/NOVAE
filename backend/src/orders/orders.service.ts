@@ -20,6 +20,7 @@ import {
   FulfillmentStatus,
   CartStatus,
   InventoryMovementType,
+  ShipmentStatus,
 } from '@prisma/client';
 
 @Injectable()
@@ -316,13 +317,17 @@ export class OrdersService {
         });
       }
 
-      // g) Finalize and convert customer's cart
-      await tx.cart.update({
-        where: { id: cart.id },
+      // g) Finalize and convert customer's cart atomically with concurrency check
+      const convertedCart = await tx.cart.updateMany({
+        where: { id: cart.id, status: CartStatus.active },
         data: {
           status: CartStatus.converted,
         },
       });
+
+      if (convertedCart.count === 0) {
+        throw new ConflictException('Cart was already processed or is no longer active');
+      }
 
       // Clear cart items from converted cart
       await tx.cartItem.deleteMany({
@@ -417,5 +422,360 @@ export class OrdersService {
     });
 
     return orders.map((o) => this.formatOrder(o, language));
+  }
+
+  // ==================================================================
+  // ADMIN ORDER MANAGEMENT
+  // ==================================================================
+
+  /** Valid status transitions enforced server-side */
+  private static readonly ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+    [OrderStatus.pending]: [OrderStatus.paid, OrderStatus.cancelled],
+    [OrderStatus.paid]: [OrderStatus.processing, OrderStatus.cancelled],
+    [OrderStatus.processing]: [OrderStatus.shipped, OrderStatus.cancelled],
+    [OrderStatus.shipped]: [OrderStatus.delivered],
+    [OrderStatus.delivered]: [],
+    [OrderStatus.cancelled]: [],
+  };
+
+  /**
+   * Get all orders for admin dashboard with optional filters
+   */
+  async adminGetAllOrders(query: {
+    search?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    data: any[];
+    meta: { page: number; limit: number; totalItems: number; totalPages: number };
+  }> {
+    const page = Math.max(1, query.page || 1);
+    const limit = Math.min(100, Math.max(1, query.limit || 20));
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (query.status && query.status !== 'ALL') {
+      where.status = query.status.toLowerCase();
+    }
+
+    if (query.search) {
+      const s = query.search.trim();
+      where.OR = [
+        { orderNumber: { contains: s, mode: 'insensitive' } },
+        { customerEmail: { contains: s, mode: 'insensitive' } },
+        { user: { fullName: { contains: s, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [orders, totalItems] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        include: {
+          user: { select: { id: true, fullName: true, email: true } },
+          items: {
+            include: {
+              product: { include: { images: true } },
+              variant: { include: { images: true } },
+            },
+          },
+          statusHistory: { orderBy: { createdAt: 'asc' } },
+          payments: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    const data = orders.map((o) => this.formatAdminOrder(o));
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      },
+    };
+  }
+
+  /**
+   * Get single order detail for admin (no ownership check)
+   */
+  async adminGetOrderById(orderId: string): Promise<any> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        user: { select: { id: true, fullName: true, email: true } },
+        items: {
+          include: {
+            product: { include: { images: true } },
+            variant: { include: { images: true, inventory: true } },
+          },
+        },
+        statusHistory: {
+          include: { user: { select: { fullName: true, email: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+        payments: true,
+        shipment: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} not found`);
+    }
+
+    return this.formatAdminOrder(order);
+  }
+
+  /**
+   * Admin status update with transition validation and audit history
+   */
+  async adminUpdateOrderStatus(
+    orderId: string,
+    targetStatus: OrderStatus,
+    adminUser: User,
+    note?: string,
+    trackingNumber?: string,
+  ): Promise<any> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: true,
+        user: { select: { id: true, fullName: true, email: true } },
+        statusHistory: { orderBy: { createdAt: 'asc' } },
+        payments: true,
+        shipment: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} not found`);
+    }
+
+    const currentStatus = order.status;
+    const allowed = OrdersService.ALLOWED_TRANSITIONS[currentStatus] || [];
+
+    if (!allowed.includes(targetStatus)) {
+      throw new BadRequestException(
+        `Cannot transition from "${currentStatus}" to "${targetStatus}". Allowed: [${allowed.join(', ')}]`,
+      );
+    }
+
+    const updatedOrder = await this.prisma.$transaction(async (tx) => {
+      // Update order status
+      const updateData: any = { status: targetStatus };
+
+      // Handle transitions
+      if (targetStatus === OrderStatus.paid) {
+        updateData.paymentStatus = PaymentStatus.paid;
+        await tx.payment.updateMany({
+          where: { orderId: order.id, status: PaymentStatus.pending },
+          data: {
+            status: PaymentStatus.paid,
+            paidAt: new Date(),
+          },
+        });
+      } else if (targetStatus === OrderStatus.processing) {
+        updateData.fulfillmentStatus = FulfillmentStatus.processing;
+      } else if (targetStatus === OrderStatus.shipped) {
+        updateData.fulfillmentStatus = FulfillmentStatus.processing;
+        if (trackingNumber) {
+          if (order.shipment) {
+            await tx.shipment.update({
+              where: { id: order.shipment.id },
+              data: {
+                trackingNumber,
+                status: ShipmentStatus.shipped,
+                shippedAt: new Date(),
+              },
+            });
+          } else {
+            await tx.shipment.create({
+              data: {
+                orderId: order.id,
+                trackingNumber,
+                status: ShipmentStatus.shipped,
+                shippedAt: new Date(),
+              },
+            });
+          }
+        }
+      } else if (targetStatus === OrderStatus.delivered) {
+        updateData.fulfillmentStatus = FulfillmentStatus.fulfilled;
+        if (order.shipment) {
+          await tx.shipment.update({
+            where: { id: order.shipment.id },
+            data: {
+              status: ShipmentStatus.delivered,
+              deliveredAt: new Date(),
+            },
+          });
+        }
+      } else if (targetStatus === OrderStatus.cancelled) {
+        updateData.fulfillmentStatus = FulfillmentStatus.cancelled;
+        if (order.paymentStatus === PaymentStatus.pending) {
+          updateData.paymentStatus = PaymentStatus.failed;
+          await tx.payment.updateMany({
+            where: { orderId: order.id, status: PaymentStatus.pending },
+            data: { status: PaymentStatus.failed },
+          });
+        }
+
+        // Release reserved inventory
+        for (const item of order.items) {
+          await tx.inventory.update({
+            where: { variantId: item.variantId },
+            data: { reservedQuantity: { decrement: item.quantity } },
+          });
+          await tx.inventoryMovement.create({
+            data: {
+              variantId: item.variantId,
+              movementType: InventoryMovementType.release,
+              quantityDelta: -item.quantity,
+              referenceType: 'order',
+              referenceId: order.id,
+              note: `Released ${item.quantity} pieces — order ${order.orderNumber} cancelled`,
+              createdBy: adminUser.id,
+            },
+          });
+        }
+      }
+
+      await tx.order.update({
+        where: { id: orderId },
+        data: updateData,
+      });
+
+      // Record status history
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: order.id,
+          fromStatus: currentStatus,
+          toStatus: targetStatus,
+          note: note || `Status changed by admin`,
+          changedBy: adminUser.id,
+        },
+      });
+
+      return tx.order.findUnique({
+        where: { id: orderId },
+        include: {
+          user: { select: { id: true, fullName: true, email: true } },
+          items: {
+            include: {
+              product: { include: { images: true } },
+              variant: { include: { images: true, inventory: true } },
+            },
+          },
+          statusHistory: {
+            include: { user: { select: { fullName: true, email: true } } },
+            orderBy: { createdAt: 'asc' },
+          },
+          payments: true,
+          shipment: true,
+        },
+      });
+    });
+
+    this.logger.log(
+      `Order ${order.orderNumber}: ${currentStatus} → ${targetStatus} (Admin: ${adminUser.email})`,
+    );
+
+    return this.formatAdminOrder(updatedOrder);
+  }
+
+  /**
+   * Format order for admin consumption (richer than customer format)
+   */
+  private formatAdminOrder(order: any): any {
+    const items = (order.items || []).map((item: any) => {
+      const primaryImage =
+        item.variant?.images?.find((img: any) => img.isPrimary)?.imageUrl ||
+        item.variant?.images?.[0]?.imageUrl ||
+        item.product?.images?.find((img: any) => img.isPrimary)?.imageUrl ||
+        item.product?.images?.[0]?.imageUrl ||
+        null;
+
+      return {
+        id: item.id,
+        productId: item.productId,
+        variantId: item.variantId,
+        productName: item.productNameSnapshot,
+        sku: item.skuSnapshot,
+        colorName: item.colorSnapshot,
+        size: item.sizeSnapshot,
+        unitPriceIdr: Number(item.unitPriceIdr),
+        quantity: item.quantity,
+        lineTotalIdr: Number(item.lineTotalIdr),
+        imageUrl: primaryImage,
+        inventory: item.variant?.inventory
+          ? {
+              quantityOnHand: item.variant.inventory.quantityOnHand,
+              reservedQuantity: item.variant.inventory.reservedQuantity,
+              available: item.variant.inventory.quantityOnHand - item.variant.inventory.reservedQuantity,
+            }
+          : null,
+      };
+    });
+
+    const statusHistory = (order.statusHistory || []).map((h: any) => ({
+      id: h.id,
+      fromStatus: h.fromStatus,
+      toStatus: h.toStatus,
+      note: h.note,
+      changedBy: h.user?.fullName || h.user?.email || null,
+      createdAt: h.createdAt,
+    }));
+
+    const payments = (order.payments || []).map((p: any) => ({
+      id: p.id,
+      provider: p.provider,
+      method: p.method,
+      amountIdr: Number(p.amountIdr),
+      status: p.status,
+      paidAt: p.paidAt,
+    }));
+
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      fulfillmentStatus: order.fulfillmentStatus,
+      subtotalIdr: Number(order.subtotalIdr),
+      shippingIdr: Number(order.shippingIdr),
+      taxIdr: Number(order.taxIdr),
+      discountIdr: Number(order.discountIdr),
+      totalIdr: Number(order.totalIdr),
+      currency: order.currency || 'IDR',
+      customerEmail: order.customerEmail,
+      customerName: order.user?.fullName || order.customerEmail,
+      customerId: order.userId,
+      shippingAddress: order.shippingAddressSnapshot,
+      items,
+      itemCount: items.reduce((s: number, i: any) => s + i.quantity, 0),
+      statusHistory,
+      payments,
+      shipment: order.shipment
+        ? {
+            id: order.shipment.id,
+            trackingNumber: order.shipment.trackingNumber,
+            courier: order.shipment.courier,
+            status: order.shipment.status,
+            shippedAt: order.shipment.shippedAt,
+            deliveredAt: order.shipment.deliveredAt,
+          }
+        : null,
+      allowedTransitions: OrdersService.ALLOWED_TRANSITIONS[order.status as OrderStatus] || [],
+      placedAt: order.placedAt,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    };
   }
 }

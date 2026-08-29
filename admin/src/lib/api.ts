@@ -373,3 +373,127 @@ export async function adminGetInventoryMovements(token: string | null, variantId
   );
 }
 
+// ------------------------------------------------------------------
+// ADMIN ORDERS TYPES & APIS
+// ------------------------------------------------------------------
+
+export interface AdminOrderItem {
+  id: string;
+  productId: string;
+  variantId: string;
+  productName: string;
+  sku: string;
+  colorName?: string | null;
+  size?: string | null;
+  unitPriceIdr: number;
+  quantity: number;
+  lineTotalIdr: number;
+  imageUrl?: string | null;
+  inventory?: {
+    quantityOnHand: number;
+    reservedQuantity: number;
+    available: number;
+  } | null;
+}
+
+export interface AdminOrderStatusHistory {
+  id: string;
+  fromStatus: string | null;
+  toStatus: string;
+  note?: string | null;
+  changedBy?: string | null;
+  createdAt: string;
+}
+
+export interface AdminOrderPayment {
+  id: string;
+  provider: string;
+  method?: string | null;
+  amountIdr: number;
+  status: string;
+  paidAt?: string | null;
+}
+
+export interface AdminOrderShipment {
+  id: string;
+  trackingNumber?: string | null;
+  courier?: string | null;
+  status: string;
+  shippedAt?: string | null;
+  deliveredAt?: string | null;
+}
+
+export interface BackendAdminOrder {
+  id: string;
+  orderNumber: string;
+  status: string;
+  paymentStatus: string;
+  fulfillmentStatus: string;
+  subtotalIdr: number;
+  shippingIdr: number;
+  taxIdr: number;
+  discountIdr: number;
+  totalIdr: number;
+  currency: string;
+  customerEmail: string;
+  customerName: string;
+  customerId?: string | null;
+  shippingAddress: any;
+  items: AdminOrderItem[];
+  itemCount: number;
+  statusHistory: AdminOrderStatusHistory[];
+  payments: AdminOrderPayment[];
+  shipment?: AdminOrderShipment | null;
+  allowedTransitions: string[];
+  placedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminOrdersQuery {
+  search?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}
+
+export async function adminGetOrders(token: string | null, query: AdminOrdersQuery = {}) {
+  const params = new URLSearchParams();
+  if (query.search) params.append('search', query.search);
+  if (query.status && query.status !== 'ALL') params.append('status', query.status);
+  if (query.page) params.append('page', String(query.page));
+  if (query.limit) params.append('limit', String(query.limit));
+
+  const queryString = params.toString();
+  const path = `/admin/orders${queryString ? `?${queryString}` : ''}`;
+
+  return fetchWithAuth<{
+    data: BackendAdminOrder[];
+    meta: {
+      page: number;
+      limit: number;
+      totalItems: number;
+      totalPages: number;
+    };
+  }>(path, token);
+}
+
+export async function adminGetOrderById(token: string | null, orderId: string) {
+  return fetchWithAuth<BackendAdminOrder>(`/admin/orders/${orderId}`, token);
+}
+
+export async function adminUpdateOrderStatus(
+  token: string | null,
+  orderId: string,
+  payload: {
+    status: string;
+    note?: string;
+    trackingNumber?: string;
+  },
+) {
+  return fetchWithAuth<BackendAdminOrder>(`/admin/orders/${orderId}/status`, token, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+

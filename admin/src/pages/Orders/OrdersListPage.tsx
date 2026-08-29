@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { useAdminDataStore } from '@/store/useAdminDataStore';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAdminUIStore } from '@/store/useAdminUIStore';
 import { useAdminTranslation } from '@/i18n/useAdminTranslation';
-import { AdminOrder, OrderStatus } from '@/types';
 import { formatIDR, formatDateTime, getOrderStatusVariant } from '@/lib/formatters';
+import {
+  adminGetOrders,
+  adminUpdateOrderStatus,
+  BackendAdminOrder,
+} from '@/lib/api';
 import {
   Table,
   TableHead,
@@ -19,60 +22,123 @@ import { Drawer } from '@/components/ui/Drawer';
 import { Select } from '@/components/ui/Select';
 import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { ShoppingBag, Eye, Truck, CheckCircle2, User, MapPin } from 'lucide-react';
+import {
+  ShoppingBag,
+  Eye,
+  Truck,
+  CheckCircle2,
+  User,
+  MapPin,
+  Clock,
+  CreditCard,
+  AlertTriangle,
+  Loader2,
+  Package,
+  ShieldCheck,
+} from 'lucide-react';
 
 export const OrdersListPage: React.FC = () => {
-  const { orders, updateOrderStatus } = useAdminDataStore();
   const { addToast } = useAdminUIStore();
   const { t, format } = useAdminTranslation();
 
+  // Data state
+  const [orders, setOrders] = useState<BackendAdminOrder[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
-  const [inspectOrder, setInspectOrder] = useState<AdminOrder | null>(null);
+  const [page, setPage] = useState(1);
 
-  // Status update in inspect drawer
-  const [newStatus, setNewStatus] = useState<OrderStatus>('PAID');
+  // Inspect drawer
+  const [inspectOrder, setInspectOrder] = useState<BackendAdminOrder | null>(null);
+  const [newStatus, setNewStatus] = useState('');
   const [trackingNumber, setTrackingNumber] = useState('');
+  const [statusNote, setStatusNote] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const statuses: { label: string; value: string }[] = [
+  const token = localStorage.getItem('novae_admin_token');
+
+  const statuses = [
     { label: t.orders.allOrders, value: 'ALL' },
-    { label: t.status.paid, value: 'PAID' },
-    { label: t.status.processing, value: 'PROCESSING' },
-    { label: t.status.shipped, value: 'SHIPPED' },
-    { label: t.status.delivered, value: 'DELIVERED' },
-    { label: t.status.pending, value: 'PENDING' },
-    { label: t.status.cancelled, value: 'CANCELLED' },
+    { label: t.status.pending, value: 'pending' },
+    { label: t.status.paid, value: 'paid' },
+    { label: t.status.processing, value: 'processing' },
+    { label: t.status.shipped, value: 'shipped' },
+    { label: t.status.delivered, value: 'delivered' },
+    { label: t.status.cancelled, value: 'cancelled' },
   ];
 
-  const filteredOrders = orders.filter((o) => {
-    const matchesSearch =
-      o.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.customerEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.shippingCity.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = selectedStatus === 'ALL' || o.status === selectedStatus;
-    return matchesSearch && matchesStatus;
-  });
+  const fetchOrders = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    const { data, error: apiErr } = await adminGetOrders(token, {
+      search: searchQuery || undefined,
+      status: selectedStatus !== 'ALL' ? selectedStatus : undefined,
+      page,
+      limit: 20,
+    });
 
-  const handleOpenInspect = (order: AdminOrder) => {
+    if (apiErr) {
+      setError(typeof apiErr.message === 'string' ? apiErr.message : 'Failed to load orders');
+      setIsLoading(false);
+      return;
+    }
+
+    setOrders(data?.data || []);
+    setTotalItems(data?.meta?.totalItems || 0);
+    setIsLoading(false);
+  }, [token, searchQuery, selectedStatus, page]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  // Reset page on filter change
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, selectedStatus]);
+
+  const handleOpenInspect = (order: BackendAdminOrder) => {
     setInspectOrder(order);
-    setNewStatus(order.status);
-    setTrackingNumber(order.trackingNumber || '');
+    setNewStatus('');
+    setTrackingNumber('');
+    setStatusNote('');
   };
 
-  const handleSaveOrderStatus = () => {
-    if (!inspectOrder) return;
-    updateOrderStatus(inspectOrder.id, newStatus, trackingNumber || undefined);
-    const translatedStatus = t.status[newStatus.toLowerCase() as keyof typeof t.status] || newStatus;
-    addToast({
-      type: 'success',
-      title: t.feedback.orderUpdated,
-      message: format(t.feedback.orderUpdatedDesc, {
-        orderNumber: inspectOrder.orderNumber,
-        status: translatedStatus,
-      }),
+  const handleSaveOrderStatus = async () => {
+    if (!inspectOrder || !newStatus) return;
+    setIsUpdating(true);
+
+    const { data, error: apiErr } = await adminUpdateOrderStatus(token, inspectOrder.id, {
+      status: newStatus,
+      note: statusNote || undefined,
+      trackingNumber: trackingNumber || undefined,
     });
-    setInspectOrder(null);
+
+    setIsUpdating(false);
+
+    if (apiErr) {
+      const msg = Array.isArray(apiErr.message) ? apiErr.message.join(', ') : apiErr.message;
+      addToast({ type: 'error', title: 'Update Failed', message: msg });
+      return;
+    }
+
+    if (data) {
+      const translatedStatus = t.status[newStatus.toLowerCase() as keyof typeof t.status] || newStatus;
+      addToast({
+        type: 'success',
+        title: t.feedback.orderUpdated,
+        message: format(t.feedback.orderUpdatedDesc, {
+          orderNumber: inspectOrder.orderNumber,
+          status: translatedStatus,
+        }),
+      });
+      setInspectOrder(data);
+      fetchOrders();
+    }
   };
 
   return (
@@ -84,22 +150,16 @@ export const OrdersListPage: React.FC = () => {
             {t.orders.title}
           </h1>
           <p className="text-xs font-sans text-muted mt-1">
-            {t.orders.subtitle}
+            {t.orders.subtitle} — {totalItems} orders
           </p>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
       <div className="space-y-3 bg-surface p-3.5 rounded-sm border border-surface-border">
-        {/* Status Pill Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
           {statuses.map((s) => {
-            const count =
-              s.value === 'ALL'
-                ? orders.length
-                : orders.filter((o) => o.status === s.value).length;
             const isSelected = selectedStatus === s.value;
-
             return (
               <button
                 key={s.value}
@@ -111,19 +171,10 @@ export const OrdersListPage: React.FC = () => {
                 }`}
               >
                 <span>{s.label}</span>
-                <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    isSelected ? 'bg-obsidian/20 text-obsidian' : 'bg-white/10 text-muted'
-                  }`}
-                >
-                  {count}
-                </span>
               </button>
             );
           })}
         </div>
-
-        {/* Search */}
         <SearchInput
           value={searchQuery}
           onChange={setSearchQuery}
@@ -131,8 +182,23 @@ export const OrdersListPage: React.FC = () => {
         />
       </div>
 
+      {/* Error State */}
+      {error && (
+        <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-sm flex items-start gap-3 text-rose-300 text-xs font-mono">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-6 h-6 text-accent-lime animate-spin" />
+        </div>
+      )}
+
       {/* Orders Table */}
-      {filteredOrders.length === 0 ? (
+      {!isLoading && !error && orders.length === 0 && (
         <EmptyState
           icon={<ShoppingBag className="w-6 h-6" />}
           title={t.orders.emptyTitle}
@@ -143,7 +209,9 @@ export const OrdersListPage: React.FC = () => {
             setSelectedStatus('ALL');
           }}
         />
-      ) : (
+      )}
+
+      {!isLoading && !error && orders.length > 0 && (
         <Table>
           <TableHead>
             <TableRow>
@@ -159,12 +227,11 @@ export const OrdersListPage: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredOrders.map((order) => {
-              const statusConfig = getOrderStatusVariant(order.status);
+            {orders.map((order) => {
+              const statusConfig = getOrderStatusVariant(order.status.toUpperCase() as any);
               const statusLabel =
                 t.status[order.status.toLowerCase() as keyof typeof t.status] ||
                 statusConfig.label;
-              const totalItems = order.items.reduce((acc, i) => acc + i.quantity, 0);
 
               return (
                 <TableRow key={order.id}>
@@ -176,17 +243,17 @@ export const OrdersListPage: React.FC = () => {
                     <div className="text-[10px] font-sans text-muted">{order.customerEmail}</div>
                   </TableCell>
                   <TableCell className="font-mono text-xs text-muted">
-                    {order.shippingCity}
+                    {order.shippingAddress?.city || '—'}
                   </TableCell>
                   <TableCell className="font-mono text-xs text-bone">
-                    {totalItems} {t.dashboard.piecesInStock.toLowerCase()}
+                    {order.itemCount} pcs
                   </TableCell>
                   <TableCell className="font-mono text-xs font-semibold tabular-nums text-bone">
-                    {formatIDR(order.totalAmount)}
+                    {formatIDR(order.totalIdr)}
                   </TableCell>
                   <TableCell>
                     <span className="font-mono text-[10px] text-muted uppercase">
-                      {order.paymentMethod.replace('_', ' ')}
+                      {order.paymentStatus}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -231,9 +298,10 @@ export const OrdersListPage: React.FC = () => {
                 variant="primary"
                 size="sm"
                 onClick={handleSaveOrderStatus}
-                leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
+                disabled={!newStatus || isUpdating}
+                leftIcon={isUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
               >
-                {t.orders.updateOrderBtn}
+                {isUpdating ? 'Updating...' : t.orders.updateOrderBtn}
               </Button>
             </div>
           }
@@ -244,28 +312,82 @@ export const OrdersListPage: React.FC = () => {
               <h4 className="text-[11px] font-mono uppercase tracking-widest text-muted font-semibold">
                 {t.orders.fulfillmentControls}
               </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Select
-                  label={t.orders.updateStatusLabel}
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value as OrderStatus)}
-                  options={[
-                    { value: 'PAID', label: t.status.paid },
-                    { value: 'PROCESSING', label: t.status.processing },
-                    { value: 'SHIPPED', label: t.status.shipped },
-                    { value: 'DELIVERED', label: t.status.delivered },
-                    { value: 'CANCELLED', label: t.status.cancelled },
-                  ]}
-                />
+
+              {inspectOrder.allowedTransitions.length === 0 ? (
+                <div className="flex items-center gap-2 text-xs font-mono text-muted-light py-2">
+                  <ShieldCheck className="w-3.5 h-3.5 text-accent-lime" />
+                  <span>This order has reached a terminal state. No further transitions allowed.</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Select
+                    label={t.orders.updateStatusLabel}
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    options={[
+                      { value: '', label: '— Select —' },
+                      ...inspectOrder.allowedTransitions.map((s) => ({
+                        value: s,
+                        label: (t.status[s.toLowerCase() as keyof typeof t.status] || s).toUpperCase(),
+                      })),
+                    ]}
+                  />
+                  <Input
+                    label={t.orders.trackingNumberLabel}
+                    placeholder={t.orders.trackingPlaceholder}
+                    value={trackingNumber}
+                    onChange={(e) => setTrackingNumber(e.target.value)}
+                    leftIcon={<Truck className="w-3.5 h-3.5" />}
+                  />
+                </div>
+              )}
+
+              {inspectOrder.allowedTransitions.length > 0 && (
                 <Input
-                  label={t.orders.trackingNumberLabel}
-                  placeholder={t.orders.trackingPlaceholder}
-                  value={trackingNumber}
-                  onChange={(e) => setTrackingNumber(e.target.value)}
-                  leftIcon={<Truck className="w-3.5 h-3.5" />}
+                  label="Admin Note"
+                  placeholder="Optional note for audit trail..."
+                  value={statusNote}
+                  onChange={(e) => setStatusNote(e.target.value)}
                 />
-              </div>
+              )}
             </div>
+
+            {/* Status History Timeline */}
+            {inspectOrder.statusHistory.length > 0 && (
+              <div className="p-3.5 bg-surface border border-surface-border rounded-sm space-y-3">
+                <h4 className="text-[11px] font-mono uppercase tracking-widest text-muted font-semibold flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-accent-lime" />
+                  <span>Status Timeline</span>
+                </h4>
+                <div className="space-y-2">
+                  {inspectOrder.statusHistory.map((h, i) => (
+                    <div
+                      key={h.id || i}
+                      className="flex items-start gap-3 text-xs font-mono"
+                    >
+                      <div className="w-2 h-2 mt-1 rounded-full bg-accent-lime shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {h.fromStatus && (
+                            <>
+                              <span className="text-muted uppercase">{h.fromStatus}</span>
+                              <span className="text-muted">→</span>
+                            </>
+                          )}
+                          <span className="text-bone font-bold uppercase">{h.toStatus}</span>
+                        </div>
+                        {h.note && (
+                          <span className="text-[10px] text-muted-light block">{h.note}</span>
+                        )}
+                        <span className="text-[10px] text-muted block">
+                          {h.changedBy || 'System'} • {formatDateTime(h.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Customer Details */}
             <div className="p-3.5 bg-surface border border-surface-border rounded-sm space-y-2.5">
@@ -280,7 +402,7 @@ export const OrdersListPage: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[10px] text-muted block">{t.orders.phone}</span>
-                  <span className="text-bone">{inspectOrder.customerPhone}</span>
+                  <span className="text-bone">{inspectOrder.shippingAddress?.phone || '—'}</span>
                 </div>
                 <div className="col-span-2">
                   <span className="text-[10px] text-muted block">{t.orders.email}</span>
@@ -295,10 +417,45 @@ export const OrdersListPage: React.FC = () => {
                 <MapPin className="w-3.5 h-3.5 text-cyan-400" />
                 <span>{t.orders.deliveryAddress}</span>
               </h4>
-              <p className="text-bone font-mono text-xs leading-relaxed">
-                {inspectOrder.shippingAddress}
-              </p>
+              <div className="text-bone font-mono text-xs leading-relaxed space-y-0.5">
+                <div>{inspectOrder.shippingAddress?.recipientName || inspectOrder.customerName}</div>
+                <div className="text-muted-light">{inspectOrder.shippingAddress?.addressLine1}</div>
+                <div className="text-muted-light">
+                  {inspectOrder.shippingAddress?.city}, {inspectOrder.shippingAddress?.province}{' '}
+                  {inspectOrder.shippingAddress?.postalCode}
+                </div>
+                <div className="text-muted-light">{inspectOrder.shippingAddress?.country}</div>
+                {inspectOrder.shippingAddress?.notes && (
+                  <div className="text-[10px] text-amber-300 mt-1">
+                    📝 {inspectOrder.shippingAddress.notes}
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Payment Info */}
+            {inspectOrder.payments.length > 0 && (
+              <div className="p-3.5 bg-surface border border-surface-border rounded-sm space-y-2.5">
+                <h4 className="text-[11px] font-mono uppercase tracking-widest text-muted font-semibold flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Payment</span>
+                </h4>
+                {inspectOrder.payments.map((p) => (
+                  <div key={p.id} className="flex justify-between text-xs font-mono">
+                    <div>
+                      <span className="text-bone uppercase">{p.provider}</span>
+                      {p.method && <span className="text-muted ml-2">({p.method})</span>}
+                    </div>
+                    <Badge
+                      variant={p.status === 'paid' ? 'emerald' : p.status === 'pending' ? 'amber' : 'rose'}
+                      size="sm"
+                    >
+                      {p.status.toUpperCase()}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Items Ordered */}
             <div className="space-y-2">
@@ -306,26 +463,37 @@ export const OrdersListPage: React.FC = () => {
                 {format(t.orders.orderedGarments, { count: inspectOrder.items.length })}
               </h4>
               <div className="space-y-2">
-                {inspectOrder.items.map((item, i) => (
+                {inspectOrder.items.map((item) => (
                   <div
-                    key={i}
+                    key={item.id}
                     className="flex items-center justify-between p-3 rounded-sm bg-charcoal-dark border border-surface-border gap-3"
                   >
-                    <img
-                      src={item.productImage}
-                      alt={item.productName}
-                      className="w-10 h-12 object-cover rounded-sm border border-surface-border shrink-0 bg-charcoal"
-                    />
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.productName}
+                        className="w-10 h-12 object-cover rounded-sm border border-surface-border shrink-0 bg-charcoal"
+                      />
+                    ) : (
+                      <div className="w-10 h-12 rounded-sm border border-surface-border shrink-0 bg-charcoal flex items-center justify-center">
+                        <Package className="w-4 h-4 text-muted" />
+                      </div>
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="font-mono text-xs font-semibold text-bone truncate">
                         {item.productName}
                       </div>
                       <div className="text-[10px] font-mono text-muted">
-                        Size: {item.size} • Color: {item.color} • Qty: {item.quantity}
+                        SKU: {item.sku} • {item.colorName} / {item.size} • Qty: {item.quantity}
                       </div>
+                      {item.inventory && (
+                        <div className="text-[10px] font-mono text-muted-light">
+                          Stock: {item.inventory.available} avail / {item.inventory.quantityOnHand} on-hand / {item.inventory.reservedQuantity} reserved
+                        </div>
+                      )}
                     </div>
                     <div className="font-mono text-xs font-bold text-bone tabular-nums shrink-0">
-                      {formatIDR(item.totalPrice)}
+                      {formatIDR(item.lineTotalIdr)}
                     </div>
                   </div>
                 ))}
@@ -336,19 +504,39 @@ export const OrdersListPage: React.FC = () => {
             <div className="p-3.5 bg-charcoal-dark border border-surface-border rounded-sm space-y-2 text-xs font-mono">
               <div className="flex justify-between text-muted">
                 <span>{t.orders.subtotal}</span>
-                <span className="text-bone">{formatIDR(inspectOrder.subtotal)}</span>
+                <span className="text-bone">{formatIDR(inspectOrder.subtotalIdr)}</span>
               </div>
               <div className="flex justify-between text-muted">
                 <span>{t.orders.shippingCourier}</span>
                 <span className="text-bone">
-                  {inspectOrder.shippingFee === 0 ? t.orders.freePromo : formatIDR(inspectOrder.shippingFee)}
+                  {inspectOrder.shippingIdr === 0 ? t.orders.freePromo : formatIDR(inspectOrder.shippingIdr)}
                 </span>
               </div>
               <div className="flex justify-between text-muted border-t border-white/10 pt-2 font-bold text-sm">
                 <span className="text-bone">{t.orders.totalSettled}</span>
-                <span className="text-accent-lime">{formatIDR(inspectOrder.totalAmount)}</span>
+                <span className="text-accent-lime">{formatIDR(inspectOrder.totalIdr)}</span>
               </div>
             </div>
+
+            {/* Shipment Info */}
+            {inspectOrder.shipment && (
+              <div className="p-3.5 bg-surface border border-surface-border rounded-sm space-y-2">
+                <h4 className="text-[11px] font-mono uppercase tracking-widest text-muted font-semibold flex items-center gap-1.5">
+                  <Truck className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Shipment</span>
+                </h4>
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div>
+                    <span className="text-[10px] text-muted block">Tracking</span>
+                    <span className="text-bone font-bold">{inspectOrder.shipment.trackingNumber || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted block">Status</span>
+                    <span className="text-bone uppercase">{inspectOrder.shipment.status}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </Drawer>
       )}

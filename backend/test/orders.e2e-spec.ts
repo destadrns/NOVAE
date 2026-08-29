@@ -130,6 +130,7 @@ describe('NOVAÉ Orders (e2e)', () => {
     cart: {
       findFirst: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     cartItem: {
       deleteMany: jest.fn(),
@@ -139,6 +140,7 @@ describe('NOVAÉ Orders (e2e)', () => {
       create: jest.fn(),
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      update: jest.fn(),
     },
     orderItem: {
       create: jest.fn(),
@@ -148,6 +150,7 @@ describe('NOVAÉ Orders (e2e)', () => {
     },
     payment: {
       create: jest.fn(),
+      updateMany: jest.fn(),
     },
     inventory: {
       findUnique: jest.fn(),

@@ -12,6 +12,7 @@ import {
   FulfillmentStatus,
   CartStatus,
   InventoryMovementType,
+  ShipmentStatus,
   LanguageCode,
 } from '@prisma/client';
 
@@ -81,6 +82,7 @@ describe('OrdersService', () => {
       cart: {
         findFirst: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       cartItem: {
         deleteMany: jest.fn(),
@@ -90,6 +92,7 @@ describe('OrdersService', () => {
         findUnique: jest.fn(),
         findMany: jest.fn(),
         create: jest.fn(),
+        update: jest.fn(),
       },
       orderItem: {
         create: jest.fn(),
@@ -99,6 +102,11 @@ describe('OrdersService', () => {
       },
       payment: {
         create: jest.fn(),
+        updateMany: jest.fn(),
+      },
+      shipment: {
+        create: jest.fn(),
+        update: jest.fn(),
       },
       inventory: {
         findUnique: jest.fn(),
@@ -212,11 +220,38 @@ describe('OrdersService', () => {
         }),
       );
 
-      // Verify cart converted
-      expect(prisma.cart.update).toHaveBeenCalledWith({
-        where: { id: 'cart-1' },
+      // Verify cart converted atomically
+      expect(prisma.cart.updateMany).toHaveBeenCalledWith({
+        where: { id: 'cart-1', status: CartStatus.active },
         data: { status: CartStatus.converted },
       });
+    });
+
+    it('should throw ConflictException if cart was concurrently converted', async () => {
+      const mockCart = {
+        id: 'cart-1',
+        userId: mockUser.id,
+        status: CartStatus.active,
+        items: [
+          {
+            id: 'item-1',
+            cartId: 'cart-1',
+            variantId: 'var-1',
+            quantity: 1,
+            variant: mockVariant,
+          },
+        ],
+      };
+
+      prisma.cart.findFirst.mockResolvedValue(mockCart);
+      prisma.inventory.findUnique.mockResolvedValue({
+        quantityOnHand: 10,
+        reservedQuantity: 2,
+      });
+      prisma.order.create.mockResolvedValue({ id: 'order-1' });
+      prisma.cart.updateMany.mockResolvedValueOnce({ count: 0 }); // Concurrent collision
+
+      await expect(service.createOrder(mockUser, mockDto)).rejects.toThrow(ConflictException);
     });
 
     it('should calculate shipping fee when subtotal is below free threshold', async () => {
@@ -419,6 +454,242 @@ describe('OrdersService', () => {
       const result = await service.getUserOrders(mockUser);
       expect(result).toHaveLength(1);
       expect(result[0].orderNumber).toBe('NOV-2026-0104');
+    });
+  });
+
+  describe('adminGetAllOrders', () => {
+    it('should return paginated orders with metadata for admin', async () => {
+      prisma.order.findMany.mockResolvedValue([
+        {
+          id: 'order-1',
+          orderNumber: 'NOV-2026-0104',
+          status: OrderStatus.pending,
+          paymentStatus: PaymentStatus.pending,
+          fulfillmentStatus: FulfillmentStatus.unfulfilled,
+          subtotalIdr: 2500000n,
+          shippingIdr: 0n,
+          taxIdr: 0n,
+          discountIdr: 0n,
+          totalIdr: 2500000n,
+          currency: 'IDR',
+          customerEmail: 'customer@novae.atelier',
+          user: { id: mockUser.id, fullName: 'Aria Wirasasmita', email: 'customer@novae.atelier' },
+          shippingAddressSnapshot: {},
+          items: [],
+          statusHistory: [],
+          payments: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
+      prisma.order.count.mockResolvedValue(1);
+
+      const result = await service.adminGetAllOrders({ page: 1, limit: 20 });
+
+      expect(result).toBeDefined();
+      expect(result.data).toHaveLength(1);
+      expect(result.meta.totalItems).toBe(1);
+      expect(result.meta.totalPages).toBe(1);
+    });
+  });
+
+  describe('adminGetOrderById', () => {
+    it('should return full order details including inventory and status history', async () => {
+      const mockAdminOrder = {
+        id: 'order-1',
+        orderNumber: 'NOV-2026-0104',
+        status: OrderStatus.pending,
+        paymentStatus: PaymentStatus.pending,
+        fulfillmentStatus: FulfillmentStatus.unfulfilled,
+        subtotalIdr: 2500000n,
+        shippingIdr: 0n,
+        taxIdr: 0n,
+        discountIdr: 0n,
+        totalIdr: 2500000n,
+        currency: 'IDR',
+        customerEmail: 'customer@novae.atelier',
+        user: { id: mockUser.id, fullName: 'Aria Wirasasmita', email: 'customer@novae.atelier' },
+        shippingAddressSnapshot: {},
+        items: [
+          {
+            id: 'oi-1',
+            productId: 'prod-1',
+            variantId: 'var-1',
+            productNameSnapshot: 'Oversized Form Jacket',
+            skuSnapshot: 'NOV-OFSJ-BLK-M',
+            colorSnapshot: 'Obsidian Black',
+            sizeSnapshot: 'M',
+            unitPriceIdr: 2500000n,
+            quantity: 1,
+            lineTotalIdr: 2500000n,
+            variant: {
+              inventory: { quantityOnHand: 10, reservedQuantity: 1 },
+              images: [],
+            },
+            product: { images: [] },
+          },
+        ],
+        statusHistory: [],
+        payments: [],
+        shipment: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      prisma.order.findUnique.mockResolvedValue(mockAdminOrder);
+
+      const result = await service.adminGetOrderById('order-1');
+      expect(result).toBeDefined();
+      expect(result.orderNumber).toBe('NOV-2026-0104');
+      expect(result.items[0].inventory).toBeDefined();
+      expect(result.items[0].inventory.available).toBe(9);
+      expect(result.allowedTransitions).toContain(OrderStatus.paid);
+      expect(result.allowedTransitions).toContain(OrderStatus.cancelled);
+    });
+
+    it('should throw NotFoundException if order is not found', async () => {
+      prisma.order.findUnique.mockResolvedValue(null);
+      await expect(service.adminGetOrderById('missing-order')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('adminUpdateOrderStatus', () => {
+    const baseOrder = {
+      id: 'order-1',
+      orderNumber: 'NOV-2026-0104',
+      status: OrderStatus.pending,
+      paymentStatus: PaymentStatus.pending,
+      fulfillmentStatus: FulfillmentStatus.unfulfilled,
+      subtotalIdr: 2500000n,
+      shippingIdr: 0n,
+      taxIdr: 0n,
+      discountIdr: 0n,
+      totalIdr: 2500000n,
+      customerEmail: 'customer@novae.atelier',
+      user: { id: mockUser.id, fullName: 'Aria Wirasasmita', email: 'customer@novae.atelier' },
+      items: [
+        {
+          id: 'oi-1',
+          variantId: 'var-1',
+          quantity: 1,
+          unitPriceIdr: 2500000n,
+          lineTotalIdr: 2500000n,
+        },
+      ],
+      statusHistory: [],
+      payments: [],
+      shipment: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    it('should transition from pending to paid and synchronize payment record', async () => {
+      prisma.order.findUnique
+        .mockResolvedValueOnce(baseOrder)
+        .mockResolvedValueOnce({ ...baseOrder, status: OrderStatus.paid, paymentStatus: PaymentStatus.paid });
+
+      const result = await service.adminUpdateOrderStatus(
+        'order-1',
+        OrderStatus.paid,
+        mockAdmin,
+        'Payment confirmed via BCA',
+      );
+
+      expect(result.status).toBe(OrderStatus.paid);
+      expect(prisma.payment.updateMany).toHaveBeenCalledWith({
+        where: { orderId: 'order-1', status: PaymentStatus.pending },
+        data: expect.objectContaining({ status: PaymentStatus.paid }),
+      });
+      expect(prisma.orderStatusHistory.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            fromStatus: OrderStatus.pending,
+            toStatus: OrderStatus.paid,
+            changedBy: mockAdmin.id,
+          }),
+        }),
+      );
+    });
+
+    it('should transition from pending to cancelled and release reserved inventory', async () => {
+      prisma.order.findUnique
+        .mockResolvedValueOnce(baseOrder)
+        .mockResolvedValueOnce({
+          ...baseOrder,
+          status: OrderStatus.cancelled,
+          fulfillmentStatus: FulfillmentStatus.cancelled,
+        });
+
+      const result = await service.adminUpdateOrderStatus(
+        'order-1',
+        OrderStatus.cancelled,
+        mockAdmin,
+        'Customer requested cancellation',
+      );
+
+      expect(result.status).toBe(OrderStatus.cancelled);
+      expect(prisma.inventory.update).toHaveBeenCalledWith({
+        where: { variantId: 'var-1' },
+        data: { reservedQuantity: { decrement: 1 } },
+      });
+      expect(prisma.inventoryMovement.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            variantId: 'var-1',
+            movementType: InventoryMovementType.release,
+            quantityDelta: -1,
+          }),
+        }),
+      );
+    });
+
+    it('should transition from processing to shipped and create shipment with tracking', async () => {
+      const processingOrder = {
+        ...baseOrder,
+        status: OrderStatus.processing,
+      };
+
+      prisma.order.findUnique
+        .mockResolvedValueOnce(processingOrder)
+        .mockResolvedValueOnce({
+          ...processingOrder,
+          status: OrderStatus.shipped,
+          shipment: { trackingNumber: 'JNE-998877', status: ShipmentStatus.shipped },
+        });
+
+      const result = await service.adminUpdateOrderStatus(
+        'order-1',
+        OrderStatus.shipped,
+        mockAdmin,
+        'Shipped via JNE Express',
+        'JNE-998877',
+      );
+
+      expect(result.status).toBe(OrderStatus.shipped);
+      expect(prisma.shipment.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          orderId: 'order-1',
+          trackingNumber: 'JNE-998877',
+          status: ShipmentStatus.shipped,
+        }),
+      });
+    });
+
+    it('should reject invalid status transitions (e.g. pending -> delivered)', async () => {
+      prisma.order.findUnique.mockResolvedValue(baseOrder);
+
+      await expect(
+        service.adminUpdateOrderStatus('order-1', OrderStatus.delivered, mockAdmin),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject transitions on terminal state (e.g. cancelled -> paid)', async () => {
+      const cancelledOrder = { ...baseOrder, status: OrderStatus.cancelled };
+      prisma.order.findUnique.mockResolvedValue(cancelledOrder);
+
+      await expect(
+        service.adminUpdateOrderStatus('order-1', OrderStatus.paid, mockAdmin),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });
