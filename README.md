@@ -87,11 +87,10 @@ NOVAÉ/
 - **Database Layer**: Complete PostgreSQL lifecycle with 15 migrations, seed data, and a 112-assertion validation suite.
 - **Backend Foundation**: Centralized error envelopes, validation pipes, structured logging, CORS, Swagger docs, and health checks.
 - **Authentication & RBAC**: Supabase Auth integration with server-side profile provisioning and role guards.
-- **Public Catalog API**: Multi-faceted product filtering (category, collection, size, color, tags, price range, search, and sorting).
-- **Admin Catalog API**: Transactional product CRUD, variant matrix management, and collection operations.
+- **Admin Catalog & Inventory API**: Transactional product CRUD, variant matrix management, stock adjustments, and inventory movement audit logs.
 - **Customer Storefront**: Responsive interface, bilingual switcher, Style Finder, product detail pages, and cart drawer UI.
-- **Admin Backoffice**: Live API connection, product table filters, inspect modal, and multi-tab product formulation modal.
-- **Automated Tests**: 34 unit tests and 33 end-to-end integration tests passing with zero errors.
+- **Admin Backoffice**: Live API connection, product catalog management, inventory matrix, stock adjustment modals, and movement history audit.
+- **Automated Tests**: 49 unit tests and 42 end-to-end integration tests passing with zero errors.
 
 ### Upcoming Milestones
 - **Phase 2**: Persistent customer cart and transactional order placement flow.
@@ -163,10 +162,10 @@ npm run dev:admin -- --port 3002
 ## Testing & Quality Assurance
 
 ```bash
-# Run backend unit tests (34 tests)
+# Run backend unit tests (49 tests)
 npm --prefix backend run test
 
-# Run backend end-to-end tests (33 tests)
+# Run backend end-to-end tests (42 tests)
 npm --prefix backend run test:e2e
 
 # Run database validation suite (112 assertions)

@@ -1,7 +1,13 @@
-import React, { useState } from 'react';
-import { useAdminDataStore } from '@/store/useAdminDataStore';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAdminAuthStore } from '@/store/useAdminAuthStore';
 import { useAdminUIStore } from '@/store/useAdminUIStore';
 import { useAdminTranslation } from '@/i18n/useAdminTranslation';
+import {
+  adminGetInventory,
+  adminAdjustInventory,
+  BackendInventoryItem,
+  BackendInventorySummary,
+} from '@/lib/api';
 import {
   Table,
   TableHead,
@@ -14,58 +20,105 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Select } from '@/components/ui/Select';
-import { Modal } from '@/components/ui/Modal';
-import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { Boxes, Plus, Minus, RefreshCw } from 'lucide-react';
+import { Skeleton } from '@/components/feedback/LoadingSkeleton';
+import { ErrorState } from '@/components/feedback/ErrorState';
+import { AdjustStockModal } from './AdjustStockModal';
+import { MovementHistoryModal } from './MovementHistoryModal';
+import {
+  Boxes,
+  Plus,
+  Minus,
+  SlidersHorizontal,
+  History,
+  RefreshCw,
+} from 'lucide-react';
 
 export const InventoryMatrixPage: React.FC = () => {
-  const { inventory, adjustStock } = useAdminDataStore();
+  const { token } = useAdminAuthStore();
   const { addToast } = useAdminUIStore();
   const { t, format } = useAdminTranslation();
+
+  const [items, setItems] = useState<BackendInventoryItem[]>([]);
+  const [summary, setSummary] = useState<BackendInventorySummary>({
+    totalPieces: 0,
+    inStockCount: 0,
+    lowStockCount: 0,
+    outOfStockCount: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
 
-  // Restock modal state
-  const [restockModalItem, setRestockModalItem] = useState<typeof inventory[0] | null>(null);
-  const [restockAmount, setRestockAmount] = useState(10);
+  // Modals state
+  const [adjustModalItem, setAdjustModalItem] = useState<BackendInventoryItem | null>(null);
+  const [historyModalItem, setHistoryModalItem] = useState<BackendInventoryItem | null>(null);
+  const [quickAdjustingId, setQuickAdjustingId] = useState<string | null>(null);
 
-  const filteredInventory = inventory.filter((item) => {
-    const matchesSearch =
-      item.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.color.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = selectedStatus === 'ALL' || item.status === selectedStatus;
-    return matchesSearch && matchesStatus;
-  });
-
-  const handleQuickAdjust = (id: string, sku: string, amount: number) => {
-    adjustStock(id, amount);
-    addToast({
-      type: amount > 0 ? 'success' : 'warning',
-      title: amount > 0 ? t.feedback.stockIncreased : t.feedback.stockDecreased,
-      message: format(t.feedback.stockAdjustedDesc, {
-        sign: amount > 0 ? '+' : '',
-        amount,
-        sku,
-      }),
+  const fetchInventory = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMsg('');
+    const { data, error } = await adminGetInventory(token, {
+      search: searchQuery.trim() || undefined,
+      status: selectedStatus !== 'ALL' ? selectedStatus : undefined,
+      limit: 100,
     });
-  };
+    setIsLoading(false);
 
-  const handleBatchRestock = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!restockModalItem) return;
-    adjustStock(restockModalItem.id, Number(restockAmount));
-    addToast({
-      type: 'success',
-      title: t.feedback.batchRestockSuccess,
-      message: format(t.feedback.batchRestockDesc, {
-        amount: restockAmount,
-        sku: restockModalItem.sku,
-      }),
+    if (error) {
+      setErrorMsg(Array.isArray(error.message) ? error.message.join(', ') : error.message);
+    } else if (data) {
+      setItems(data.data);
+      setSummary(data.summary);
+    }
+  }, [token, searchQuery, selectedStatus]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchInventory();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [fetchInventory]);
+
+  const handleQuickAdjust = async (item: BackendInventoryItem, amount: number) => {
+    if (amount < 0 && item.availableQuantity <= 0) {
+      addToast({
+        type: 'error',
+        title: 'Penyesuaian Ditolak',
+        message: 'Stok tersedia sudah habis (0). Tidak dapat melakukan pengurangan stok lebih lanjut.',
+      });
+      return;
+    }
+
+    setQuickAdjustingId(item.id);
+    const { data, error } = await adminAdjustInventory(token, item.variantId, {
+      quantityDelta: amount,
+      movementType: amount > 0 ? 'restock' : 'adjustment',
+      note: amount > 0 ? 'Quick +1 Restock' : 'Quick -1 Adjustment',
+      referenceType: 'quick_action',
     });
-    setRestockModalItem(null);
+    setQuickAdjustingId(null);
+
+    if (error) {
+      addToast({
+        type: 'error',
+        title: 'Penyesuaian Gagal',
+        message: Array.isArray(error.message) ? error.message.join(', ') : error.message,
+      });
+    } else if (data) {
+      addToast({
+        type: amount > 0 ? 'success' : 'warning',
+        title: amount > 0 ? t.feedback.stockIncreased : t.feedback.stockDecreased,
+        message: format(t.feedback.stockAdjustedDesc, {
+          sign: amount > 0 ? '+' : '',
+          amount,
+          sku: item.sku,
+        }),
+      });
+      fetchInventory();
+    }
   };
 
   return (
@@ -80,17 +133,33 @@ export const InventoryMatrixPage: React.FC = () => {
             {t.inventory.subtitle}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {summary.outOfStockCount > 0 && (
+            <Badge variant="rose" size="md">
+              {summary.outOfStockCount} HABIS
+            </Badge>
+          )}
           <Badge variant="amber" size="md">
             {format(t.inventory.lowStockBadge, {
-              count: inventory.filter((i) => i.status === 'LOW_STOCK').length,
+              count: summary.lowStockCount,
             })}
           </Badge>
           <Badge variant="emerald" size="md">
             {format(t.inventory.totalPiecesBadge, {
-              count: inventory.reduce((acc, i) => acc + i.stock, 0),
+              count: summary.totalPieces,
             })}
           </Badge>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={fetchInventory}
+            disabled={isLoading}
+            className="p-1.5 text-muted hover:text-bone"
+            title="Refresh Data"
+            aria-label="Refresh Data"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
       </div>
 
@@ -117,8 +186,21 @@ export const InventoryMatrixPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Inventory Table */}
-      {filteredInventory.length === 0 ? (
+      {/* Error State */}
+      {errorMsg ? (
+        <ErrorState
+          message={errorMsg}
+          onRetry={fetchInventory}
+        />
+      ) : isLoading ? (
+        /* Loading Skeleton */
+        <div className="bg-surface rounded-sm border border-surface-border p-4 space-y-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-9 w-full" />
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        /* Empty State */
         <EmptyState
           icon={<Boxes className="w-6 h-6" />}
           title={t.inventory.emptyTitle}
@@ -130,6 +212,7 @@ export const InventoryMatrixPage: React.FC = () => {
           }}
         />
       ) : (
+        /* Inventory Table */
         <Table>
           <TableHead>
             <TableRow>
@@ -145,25 +228,41 @@ export const InventoryMatrixPage: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredInventory.map((item) => (
+            {items.map((item) => (
               <TableRow key={item.id}>
                 <TableCell className="font-mono text-[11px] font-bold text-bone">
                   {item.sku}
                 </TableCell>
                 <TableCell className="font-mono text-xs text-bone">
-                  {item.productName}
+                  <div className="flex flex-col">
+                    <span className="font-semibold">{item.productName}</span>
+                    {item.collection && (
+                      <span className="text-[10px] text-muted">
+                        {item.collection.code}
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="font-mono text-xs text-muted">
-                  {item.color}
+                  <div className="flex items-center gap-1.5">
+                    {item.colorCode && (
+                      <span
+                        className="w-2.5 h-2.5 rounded-full border border-white/20 shrink-0"
+                        style={{ backgroundColor: item.colorCode }}
+                        title={item.colorName}
+                      />
+                    )}
+                    <span>{item.colorName}</span>
+                  </div>
                 </TableCell>
                 <TableCell className="font-mono text-xs text-bone font-semibold">
                   {item.size}
                 </TableCell>
                 <TableCell className="font-mono text-xs tabular-nums text-bone">
-                  {item.stock}
+                  {item.quantityOnHand}
                 </TableCell>
                 <TableCell className="font-mono text-xs tabular-nums text-muted">
-                  {item.reserved}
+                  {item.reservedQuantity}
                 </TableCell>
                 <TableCell className="font-mono text-xs font-bold tabular-nums">
                   <span
@@ -175,7 +274,7 @@ export const InventoryMatrixPage: React.FC = () => {
                         : 'text-emerald-400'
                     }
                   >
-                    {item.available}
+                    {item.availableQuantity}
                   </span>
                 </TableCell>
                 <TableCell>
@@ -201,17 +300,19 @@ export const InventoryMatrixPage: React.FC = () => {
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1.5">
                     <button
-                      onClick={() => handleQuickAdjust(item.id, item.sku, -1)}
-                      className="w-6 h-6 rounded-sm bg-white/5 hover:bg-white/10 text-muted hover:text-bone flex items-center justify-center transition-colors"
-                      title="Decrease 1"
+                      onClick={() => handleQuickAdjust(item, -1)}
+                      disabled={quickAdjustingId === item.id || item.availableQuantity <= 0}
+                      className="w-6 h-6 rounded-sm bg-white/5 hover:bg-white/10 text-muted hover:text-bone disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                      title="Kurangi 1 (-1)"
                       aria-label="Decrease 1"
                     >
                       <Minus className="w-3 h-3" />
                     </button>
                     <button
-                      onClick={() => handleQuickAdjust(item.id, item.sku, 1)}
-                      className="w-6 h-6 rounded-sm bg-white/5 hover:bg-white/10 text-muted hover:text-bone flex items-center justify-center transition-colors"
-                      title="Increase 1"
+                      onClick={() => handleQuickAdjust(item, 1)}
+                      disabled={quickAdjustingId === item.id}
+                      className="w-6 h-6 rounded-sm bg-white/5 hover:bg-white/10 text-muted hover:text-bone disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                      title="Tambah 1 (+1)"
                       aria-label="Increase 1"
                     >
                       <Plus className="w-3 h-3" />
@@ -219,13 +320,21 @@ export const InventoryMatrixPage: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        setRestockModalItem(item);
-                        setRestockAmount(10);
-                      }}
+                      onClick={() => setAdjustModalItem(item)}
                       className="text-[10px] py-1 px-2 ml-1"
+                      leftIcon={<SlidersHorizontal className="w-3 h-3" />}
                     >
-                      {t.inventory.batchBtn}
+                      Atur
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setHistoryModalItem(item)}
+                      className="text-[10px] py-1 px-1.5 text-muted hover:text-bone"
+                      title="Lihat Riwayat Mutasi Audit"
+                      aria-label="Lihat Riwayat Mutasi Audit"
+                    >
+                      <History className="w-3 h-3" />
                     </Button>
                   </div>
                 </TableCell>
@@ -235,64 +344,23 @@ export const InventoryMatrixPage: React.FC = () => {
         </Table>
       )}
 
-      {/* Batch Restock Modal */}
-      {restockModalItem && (
-        <Modal
+      {/* Adjust Stock Modal */}
+      {adjustModalItem && (
+        <AdjustStockModal
           isOpen={true}
-          onClose={() => setRestockModalItem(null)}
-          title={format(t.inventory.batchModalTitle, { sku: restockModalItem.sku })}
-          subtitle={format(t.inventory.batchModalSubtitle, {
-            productName: restockModalItem.productName,
-            color: restockModalItem.color,
-            size: restockModalItem.size,
-          })}
-          maxWidth="md"
-        >
-          <form onSubmit={handleBatchRestock} className="space-y-4">
-            <div className="p-3 bg-charcoal-dark border border-surface-border rounded-sm text-xs font-mono grid grid-cols-2 gap-2">
-              <div>
-                <span className="text-[10px] text-muted block">{t.inventory.currentStock}</span>
-                <span className="text-bone font-bold">
-                  {restockModalItem.stock} {t.dashboard.unitsSold.toLowerCase()}
-                </span>
-              </div>
-              <div>
-                <span className="text-[10px] text-muted block">{t.inventory.availableToSell}</span>
-                <span className="text-emerald-400 font-bold">
-                  {restockModalItem.available} {t.dashboard.unitsSold.toLowerCase()}
-                </span>
-              </div>
-            </div>
+          item={adjustModalItem}
+          onClose={() => setAdjustModalItem(null)}
+          onSuccess={fetchInventory}
+        />
+      )}
 
-            <Input
-              label={t.inventory.additionalUnits}
-              type="number"
-              min="1"
-              required
-              value={restockAmount}
-              onChange={(e) => setRestockAmount(Number(e.target.value))}
-            />
-
-            <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setRestockModalItem(null)}
-              >
-                {t.inventory.cancelBtn}
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                size="sm"
-                leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
-              >
-                {t.inventory.confirmRestockBtn}
-              </Button>
-            </div>
-          </form>
-        </Modal>
+      {/* Movement History Audit Modal */}
+      {historyModalItem && (
+        <MovementHistoryModal
+          isOpen={true}
+          item={historyModalItem}
+          onClose={() => setHistoryModalItem(null)}
+        />
       )}
     </div>
   );

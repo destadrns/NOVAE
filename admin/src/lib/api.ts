@@ -244,3 +244,132 @@ export async function adminGetCollections(token: string | null) {
 export async function adminGetCategories(token?: string | null) {
   return fetchWithAuth<BackendCategory[]>('/categories', token);
 }
+
+// ------------------------------------------------------------------
+// ADMIN INVENTORY TYPES & APIS
+// ------------------------------------------------------------------
+export type InventoryHealthStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
+
+export interface BackendInventoryItem {
+  id: string;
+  variantId: string;
+  sku: string;
+  productName: string;
+  productId: string;
+  productSlug: string;
+  colorName: string;
+  colorCode?: string | null;
+  size: string;
+  priceOverrideIdr?: number | null;
+  basePriceIdr: number;
+  quantityOnHand: number;
+  reservedQuantity: number;
+  availableQuantity: number;
+  lowStockThreshold: number;
+  status: InventoryHealthStatus;
+  variantStatus: string;
+  category?: {
+    id: string;
+    slug: string;
+    name: string;
+  } | null;
+  collection?: {
+    id: string;
+    code: string;
+    slug: string;
+    name: string;
+  } | null;
+  updatedAt: string;
+}
+
+export interface BackendInventoryMovement {
+  id: string;
+  variantId: string;
+  movementType: 'purchase' | 'sale' | 'reservation' | 'release' | 'restock' | 'adjustment' | 'return';
+  quantityDelta: number;
+  referenceType?: string | null;
+  referenceId?: string | null;
+  note?: string | null;
+  createdByName?: string | null;
+  createdByEmail?: string | null;
+  createdAt: string;
+}
+
+export interface BackendInventorySummary {
+  totalPieces: number;
+  inStockCount: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+}
+
+export interface AdminInventoryQuery {
+  search?: string;
+  status?: string;
+  category?: string;
+  collection?: string;
+  page?: number;
+  limit?: number;
+}
+
+export async function adminGetInventory(
+  token: string | null,
+  query: AdminInventoryQuery = {},
+) {
+  const params = new URLSearchParams();
+  if (query.search) params.append('search', query.search);
+  if (query.status && query.status !== 'ALL') params.append('status', query.status);
+  if (query.category && query.category !== 'ALL') params.append('category', query.category);
+  if (query.collection && query.collection !== 'ALL') params.append('collection', query.collection);
+  if (query.page) params.append('page', String(query.page));
+  if (query.limit) params.append('limit', String(query.limit));
+
+  const queryString = params.toString();
+  const path = `/admin/inventory${queryString ? `?${queryString}` : ''}`;
+
+  return fetchWithAuth<{
+    data: BackendInventoryItem[];
+    summary: BackendInventorySummary;
+    meta: {
+      page: number;
+      limit: number;
+      totalItems: number;
+      totalPages: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
+  }>(path, token);
+}
+
+export async function adminGetLowStockInventory(token: string | null) {
+  return fetchWithAuth<BackendInventoryItem[]>('/admin/inventory/low-stock', token);
+}
+
+export async function adminGetVariantInventory(token: string | null, variantId: string) {
+  return fetchWithAuth<BackendInventoryItem>(`/admin/inventory/${variantId}`, token);
+}
+
+export async function adminAdjustInventory(
+  token: string | null,
+  variantId: string,
+  payload: {
+    quantityDelta: number;
+    movementType?: string;
+    note?: string;
+    lowStockThreshold?: number;
+    referenceType?: string;
+    referenceId?: string;
+  },
+) {
+  return fetchWithAuth<BackendInventoryItem>(`/admin/inventory/${variantId}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminGetInventoryMovements(token: string | null, variantId: string) {
+  return fetchWithAuth<BackendInventoryMovement[]>(
+    `/admin/inventory/${variantId}/movements`,
+    token,
+  );
+}
+
