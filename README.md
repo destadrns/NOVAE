@@ -89,16 +89,18 @@ NOVAÉ/
 - **Authentication & RBAC**: Supabase Auth integration with server-side profile provisioning, optional guest auth, and role guards.
 - **Admin Catalog & Inventory API**: Transactional product CRUD, variant matrix management, stock adjustments, and inventory movement audit logs.
 - **Commerce Subsystem (Cart & Wishlist)**: Persistent customer cart, polymorphic variant addition, guest-to-auth cart merge, and live wishlist synchronization.
-- **Phase 3A Checkout Experience**: Multi-step checkout (`/checkout`), shipping address form, courier selection, server-authoritative calculations, and order review.
-- **Customer Storefront**: Responsive interface, bilingual switcher, Style Finder, product detail pages, cart drawer, and client account portal.
-- **Admin Backoffice**: Live API connection, product catalog management, inventory matrix, stock adjustment modals, and movement history audit.
-- **Automated Tests**: 66 unit tests and 54 end-to-end integration tests passing with zero errors.
+- **Customer Checkout & Order Review**: Multi-step checkout (`/checkout`), shipping address form, courier selection, server-authoritative calculations, and order confirmation.
+- **Transactional Order Placement**: Atomic cart-to-order transaction (`POST /api/v1/orders`), server-side price snapshots, sequential `NOV-YYYY-XXXX` code generation, double-lock inventory reservation, and cart conversion.
+- **Admin Order Management**: Protected `/api/v1/admin/orders` endpoints, status filtering, search, order detail view, status timeline, inventory context, controlled transitions (`pending → paid → processing → shipped → delivered`), and automatic stock release on cancellation.
+- **Customer Storefront**: Responsive interface, bilingual switcher, Style Finder, product detail pages, cart drawer, and live customer order history.
+- **Admin Backoffice**: Live API connection, product catalog management, inventory matrix, stock adjustment modals, and order management dashboard.
+- **Automated Tests**: 85 unit tests and 71 end-to-end integration tests passing with zero errors across 9 unit and 8 E2E suites.
 
 ### Upcoming Milestones
-- **Phase 3B**: Transactional order creation (`POST /api/v1/orders`) and inventory reservation locking.
-- **Phase 4**: Payment gateway integration (Midtrans / Xendit) and courier logistics API integration.
-- **Phase 5**: Customer order status tracking and fulfillment management.
-- **Phase 6**: Full Journal editorial CMS and production cloud deployment.
+- **Phase 4**: Payment gateway integration (Midtrans / Xendit).
+- **Phase 5**: Courier logistics API integration (JNE / J&T / GoSend) and shipment tracking webhooks.
+- **Phase 6**: Automated customer email notifications on order lifecycle updates.
+- **Phase 7**: Full Journal editorial CMS and production cloud deployment.
 
 ---
 
@@ -164,10 +166,10 @@ npm run dev:admin -- --port 3002
 ## Testing & Quality Assurance
 
 ```bash
-# Run backend unit tests (66 tests)
+# Run backend unit tests (85 tests)
 npm --prefix backend run test
 
-# Run backend end-to-end tests (54 tests)
+# Run backend end-to-end tests (71 tests)
 npm --prefix backend run test:e2e
 
 # Run database validation suite (112 assertions)
