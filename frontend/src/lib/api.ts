@@ -230,3 +230,73 @@ export async function apiClearWishlist(token: string, lang: string = 'id') {
   });
 }
 
+// ------------------------------------------------------------------
+// ORDERS CLIENT APIS & TYPES
+// ------------------------------------------------------------------
+
+export interface CreateOrderPayload {
+  shippingAddress: {
+    fullName: string;
+    email: string;
+    phone: string;
+    street: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    country?: string;
+    notes?: string;
+    saveAddress?: boolean;
+  };
+  shippingMethod: string;
+  customerNotes?: string;
+}
+
+export interface FrontendOrderItem {
+  id: string;
+  productId: string;
+  variantId: string;
+  productName: string;
+  sku: string;
+  colorName?: string | null;
+  size?: string | null;
+  unitPriceIdr: number;
+  quantity: number;
+  lineTotalIdr: number;
+  imageUrl?: string | null;
+}
+
+export interface FrontendOrder {
+  id: string;
+  orderNumber: string;
+  status: string;
+  paymentStatus: string;
+  fulfillmentStatus: string;
+  subtotalIdr: number;
+  shippingIdr: number;
+  taxIdr: number;
+  discountIdr: number;
+  totalIdr: number;
+  currency: string;
+  customerEmail: string;
+  shippingAddress: any;
+  items: FrontendOrderItem[];
+  placedAt?: string | null;
+  createdAt: string;
+}
+
+export async function apiCreateOrder(token: string, payload: CreateOrderPayload, lang: string = 'id') {
+  return fetchWithAuth<FrontendOrder>(`/orders?lang=${lang}`, token, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiGetUserOrders(token: string, lang: string = 'id') {
+  return fetchWithAuth<FrontendOrder[]>(`/orders?lang=${lang}`, token);
+}
+
+export async function apiGetOrderById(token: string, orderId: string, lang: string = 'id') {
+  return fetchWithAuth<FrontendOrder>(`/orders/${orderId}?lang=${lang}`, token);
+}
+
+

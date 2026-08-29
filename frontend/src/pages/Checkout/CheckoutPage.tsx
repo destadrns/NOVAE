@@ -17,6 +17,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTranslation } from '@/i18n/useTranslation';
 import { formatIDR } from '@/lib/formatters';
+import { apiCreateOrder, FrontendOrder } from '@/lib/api';
 
 interface ShippingAddress {
   fullName: string;
@@ -43,8 +44,8 @@ interface ShippingMethodOption {
 }
 
 export const CheckoutPage: React.FC = () => {
-  const { items, subtotalIdr, fetchCart, isLoading: isCartLoading } = useCartStore();
-  const { user, token } = useAuthStore();
+  const { items, subtotalIdr, fetchCart, clearCart, isLoading: isCartLoading } = useCartStore();
+  const { user, token, openAuthModal } = useAuthStore();
   const { t, language } = useTranslation();
   const navigate = useNavigate();
 
@@ -54,6 +55,8 @@ export const CheckoutPage: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [reviewConfirmed, setReviewConfirmed] = useState<boolean>(false);
+  const [confirmedOrder, setConfirmedOrder] = useState<FrontendOrder | null>(null);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   // Address form state
   const [address, setAddress] = useState<ShippingAddress>({
@@ -151,12 +154,50 @@ export const CheckoutPage: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleConfirmOrderReview = () => {
+  const handleConfirmOrderReview = async () => {
+    if (!token) {
+      openAuthModal('signin');
+      return;
+    }
+
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setReviewConfirmed(true);
-    }, 1200);
+    setOrderError(null);
+
+    const { data, error } = await apiCreateOrder(
+      token,
+      {
+        shippingAddress: {
+          fullName: address.fullName,
+          email: address.email,
+          phone: address.phone,
+          street: address.street,
+          city: address.city,
+          province: address.province,
+          postalCode: address.postalCode,
+          country: address.country,
+          notes: address.notes,
+          saveAddress: address.saveAddress,
+        },
+        shippingMethod,
+        customerNotes: address.notes,
+      },
+      language,
+    );
+
+    setIsSubmitting(false);
+
+    if (error || !data) {
+      const errMsg = Array.isArray(error?.message)
+        ? error.message.join(', ')
+        : error?.message || 'Gagal memproses pesanan. Periksa ketersediaan stok atau coba lagi.';
+      setOrderError(errMsg);
+      return;
+    }
+
+    setConfirmedOrder(data);
+    setReviewConfirmed(true);
+    clearCart();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Empty cart fallback
@@ -542,25 +583,67 @@ export const CheckoutPage: React.FC = () => {
                   exit={{ opacity: 0, x: 20 }}
                   className="space-y-6"
                 >
-                  {reviewConfirmed ? (
+                  {reviewConfirmed && confirmedOrder ? (
                     <div className="p-8 bg-charcoal border border-accent-lime/40 rounded-sm text-center space-y-6">
                       <div className="w-16 h-16 rounded-full bg-accent-lime/10 border border-accent-lime/30 text-accent-lime flex items-center justify-center mx-auto">
                         <Check className="w-8 h-8" />
                       </div>
                       <div className="space-y-2">
-                        <h3 className="text-xl font-display font-bold uppercase tracking-wider text-bone">
-                          Pesanan Siap Diproses
+                        <span className="text-[10px] font-mono text-accent-lime uppercase tracking-widest block">
+                          PESANAN BERHASIL DIBUAT
+                        </span>
+                        <h3 className="text-2xl font-display font-extrabold uppercase tracking-wider text-bone">
+                          {confirmedOrder.orderNumber}
                         </h3>
                         <p className="text-xs font-mono text-muted-light max-w-md mx-auto leading-relaxed">
-                          Seluruh data kontak, alamat, metode kurir, dan ketersediaan stok fisik telah diverifikasi oleh server NOVAÉ Atelier.
+                          Pesanan Anda telah resmi diverifikasi oleh server NOVAÉ Atelier. Stok telah direservasi secara aman di database.
                         </p>
                       </div>
-                      <div className="p-4 bg-obsidian border border-white/10 rounded-sm text-xs font-mono text-accent-lime">
-                        <span>Fase 3A (UI Checkout + Review) Selesai. Gerbang Pembayaran akan diintegrasikan pada Fase 3B.</span>
+
+                      <div className="p-4 bg-obsidian border border-white/10 rounded-sm text-xs font-mono space-y-2 text-left">
+                        <div className="flex justify-between border-b border-white/10 pb-2">
+                          <span className="text-muted">Total Pembayaran:</span>
+                          <span className="text-accent-lime font-bold">{formatIDR(confirmedOrder.totalIdr)}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-2">
+                          <span className="text-muted">Status Pembayaran:</span>
+                          <span className="text-amber-400 uppercase font-bold">{confirmedOrder.paymentStatus}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted">Tujuan Pengiriman:</span>
+                          <span className="text-bone truncate max-w-xs">{confirmedOrder.shippingAddress?.addressLine1 || confirmedOrder.shippingAddress?.street}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => navigate('/account')}
+                          className="w-full sm:w-auto px-6 py-3.5 bg-accent-lime hover:bg-bone text-obsidian font-bold text-xs font-mono uppercase tracking-widest transition-colors"
+                        >
+                          LIHAT DI RIWAYAT AKUN →
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/shop')}
+                          className="w-full sm:w-auto px-6 py-3.5 bg-white/10 hover:bg-white/20 text-bone font-mono text-xs uppercase tracking-widest transition-colors"
+                        >
+                          JELAJAHI KATALOG
+                        </button>
                       </div>
                     </div>
                   ) : (
                     <>
+                      {orderError && (
+                        <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-sm flex items-start gap-3 text-rose-300 text-xs font-mono">
+                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold block">Gagal Membuat Pesanan</span>
+                            <span>{orderError}</span>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Recipient & Destination Summary */}
                       <div className="p-6 bg-charcoal border border-white/10 rounded-sm space-y-4">
                         <div className="flex items-center justify-between border-b border-white/10 pb-3">
@@ -650,7 +733,7 @@ export const CheckoutPage: React.FC = () => {
                           className="px-8 py-4 bg-accent-lime hover:bg-bone text-obsidian font-bold text-xs uppercase tracking-[0.2em] flex items-center gap-3 transition-colors shadow-xl disabled:opacity-40"
                         >
                           {isSubmitting ? (
-                            <span className="animate-pulse">MEMVERIFIKASI PESANAN...</span>
+                            <span className="animate-pulse">MEMPROSES PESANAN...</span>
                           ) : (
                             <span>{t.checkout.actions.readyToPay}</span>
                           )}

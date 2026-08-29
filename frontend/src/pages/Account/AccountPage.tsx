@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
@@ -7,6 +7,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatIDR } from '@/lib/formatters';
 import { PRODUCTS } from '@/data/products';
+import { apiGetUserOrders, FrontendOrder } from '@/lib/api';
 import {
   Mail,
   ShieldCheck,
@@ -17,12 +18,14 @@ import {
   Heart,
   ShoppingBag,
   Trash2,
+  Clock,
 } from 'lucide-react';
 
 export const AccountPage: React.FC = () => {
   const { user, token, signOut } = useAuthStore();
   const { language } = useLanguageStore();
   const { wishlistIds, items: wishlistItems, fetchWishlist, toggleWishlist } = useWishlistStore();
+  const [orders, setOrders] = useState<FrontendOrder[]>([]);
   const addItem = useCartStore((state) => state.addItem);
   const openCart = useUIStore((state) => state.openCart);
   const navigate = useNavigate();
@@ -32,6 +35,9 @@ export const AccountPage: React.FC = () => {
   useEffect(() => {
     if (token) {
       fetchWishlist(token, language);
+      apiGetUserOrders(token, language).then(({ data }) => {
+        if (data) setOrders(data);
+      });
     }
   }, [token, language, fetchWishlist]);
 
@@ -133,6 +139,7 @@ export const AccountPage: React.FC = () => {
             <div className="flex items-center gap-2 text-bone text-sm font-mono font-bold uppercase tracking-wider">
               <Package className="w-4 h-4 text-accent-lime" />
               <span>{isId ? 'Riwayat Pesanan' : 'Order History'}</span>
+              <span className="text-xs font-normal text-muted-light">({orders.length})</span>
             </div>
             <button
               onClick={() => navigate('/shop')}
@@ -143,13 +150,44 @@ export const AccountPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="p-8 border border-dashed border-white/10 rounded-sm text-center space-y-2 bg-obsidian/40">
-            <p className="text-xs font-mono text-muted-light">
-              {isId
-                ? 'Belum ada pesanan aktif. Pesanan Anda yang telah diverifikasi akan ditampilkan di sini.'
-                : 'No active orders yet. Your confirmed atelier orders will appear here.'}
-            </p>
-          </div>
+          {orders.length === 0 ? (
+            <div className="p-8 border border-dashed border-white/10 rounded-sm text-center space-y-2 bg-obsidian/40">
+              <p className="text-xs font-mono text-muted-light">
+                {isId
+                  ? 'Belum ada pesanan aktif. Pesanan Anda yang telah diverifikasi akan ditampilkan di sini.'
+                  : 'No active orders yet. Your confirmed atelier orders will appear here.'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+              {orders.map((ord) => (
+                <div
+                  key={ord.id}
+                  className="p-3 bg-obsidian/60 border border-white/10 rounded-sm flex items-center justify-between gap-3 text-xs font-mono"
+                >
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-bone">{ord.orderNumber}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-lime/10 text-accent-lime uppercase border border-accent-lime/20">
+                        {ord.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-muted-light">
+                      <Clock className="w-3 h-3 text-muted" />
+                      <span>{new Date(ord.createdAt).toLocaleDateString(isId ? 'id-ID' : 'en-US')}</span>
+                      <span>•</span>
+                      <span>{ord.items.length} items</span>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <span className="text-accent-lime font-bold block">{formatIDR(ord.totalIdr)}</span>
+                    <span className="text-[10px] text-amber-400 uppercase block">{ord.paymentStatus}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
