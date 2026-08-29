@@ -69,3 +69,164 @@ export async function fetchCurrentProfile(token: string) {
     createdAt: string;
   }>('/auth/me', token);
 }
+
+// ------------------------------------------------------------------
+// CART & WISHLIST CLIENT APIS & TYPES
+// ------------------------------------------------------------------
+
+export interface FrontendCartItem {
+  id: string;
+  variantId: string;
+  productId: string;
+  productSlug: string;
+  productName: string;
+  colorName: string;
+  colorCode?: string | null;
+  size: string;
+  sku: string;
+  imageUrl?: string | null;
+  quantity: number;
+  unitPriceIdr: number;
+  totalPriceIdr: number;
+  availableQuantity: number;
+  isAvailable: boolean;
+  isLowStock: boolean;
+  isOutOfStock: boolean;
+}
+
+export interface FrontendCart {
+  id: string;
+  userId?: string | null;
+  sessionKey?: string | null;
+  status: string;
+  currency: string;
+  itemCount: number;
+  subtotalIdr: number;
+  totalIdr: number;
+  items: FrontendCartItem[];
+}
+
+export interface FrontendWishlistItem {
+  id: string;
+  productId: string;
+  slug: string;
+  name: string;
+  skuRoot: string;
+  basePriceIdr: number;
+  imageUrl?: string | null;
+  status: string;
+  isAvailable: boolean;
+  categoryName?: string | null;
+  collectionCode?: string | null;
+  createdAt: string;
+}
+
+export interface FrontendWishlist {
+  id: string;
+  userId: string;
+  itemCount: number;
+  items: FrontendWishlistItem[];
+}
+
+export function getGuestSessionKey(): string {
+  const KEY = 'novae_guest_session_key';
+  try {
+    let key = localStorage.getItem(KEY);
+    if (!key) {
+      key = `guest-${Math.random().toString(36).substring(2)}-${Date.now()}`;
+      localStorage.setItem(KEY, key);
+    }
+    return key;
+  } catch {
+    return 'guest-fallback-session';
+  }
+}
+
+export async function apiGetCart(token?: string | null, sessionKey?: string, lang: string = 'id') {
+  const sKey = sessionKey || getGuestSessionKey();
+  return fetchWithAuth<FrontendCart>(`/cart?lang=${lang}`, token, {
+    headers: { 'x-session-key': sKey },
+  });
+}
+
+export async function apiAddToCart(
+  variantId: string,
+  quantity: number = 1,
+  token?: string | null,
+  sessionKey?: string,
+  lang: string = 'id',
+) {
+  const sKey = sessionKey || getGuestSessionKey();
+  return fetchWithAuth<FrontendCart>(`/cart/items?lang=${lang}`, token, {
+    method: 'POST',
+    headers: { 'x-session-key': sKey },
+    body: JSON.stringify({ variantId, quantity }),
+  });
+}
+
+export async function apiUpdateCartItem(
+  itemId: string,
+  quantity: number,
+  token?: string | null,
+  sessionKey?: string,
+  lang: string = 'id',
+) {
+  const sKey = sessionKey || getGuestSessionKey();
+  return fetchWithAuth<FrontendCart>(`/cart/items/${itemId}?lang=${lang}`, token, {
+    method: 'PATCH',
+    headers: { 'x-session-key': sKey },
+    body: JSON.stringify({ quantity }),
+  });
+}
+
+export async function apiRemoveCartItem(
+  itemId: string,
+  token?: string | null,
+  sessionKey?: string,
+  lang: string = 'id',
+) {
+  const sKey = sessionKey || getGuestSessionKey();
+  return fetchWithAuth<FrontendCart>(`/cart/items/${itemId}?lang=${lang}`, token, {
+    method: 'DELETE',
+    headers: { 'x-session-key': sKey },
+  });
+}
+
+export async function apiClearCart(token?: string | null, sessionKey?: string, lang: string = 'id') {
+  const sKey = sessionKey || getGuestSessionKey();
+  return fetchWithAuth<FrontendCart>(`/cart?lang=${lang}`, token, {
+    method: 'DELETE',
+    headers: { 'x-session-key': sKey },
+  });
+}
+
+export async function apiMergeCart(guestSessionKey: string, token: string, lang: string = 'id') {
+  return fetchWithAuth<FrontendCart>(`/cart/merge?lang=${lang}`, token, {
+    method: 'POST',
+    body: JSON.stringify({ guestSessionKey }),
+  });
+}
+
+export async function apiGetWishlist(token: string, lang: string = 'id') {
+  return fetchWithAuth<FrontendWishlist>(`/wishlist?lang=${lang}`, token);
+}
+
+export async function apiAddToWishlist(productId: string, token: string, lang: string = 'id') {
+  return fetchWithAuth<FrontendWishlist>(`/wishlist/items?lang=${lang}`, token, {
+    method: 'POST',
+    body: JSON.stringify({ productId }),
+  });
+}
+
+export async function apiRemoveFromWishlist(productId: string, token: string, lang: string = 'id') {
+  return fetchWithAuth<FrontendWishlist>(`/wishlist/items/${productId}?lang=${lang}`, token, {
+    method: 'DELETE',
+  });
+}
+
+export async function apiClearWishlist(token: string, lang: string = 'id') {
+  return fetchWithAuth<FrontendWishlist>(`/wishlist?lang=${lang}`, token, {
+    method: 'DELETE',
+  });
+}
+

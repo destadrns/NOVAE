@@ -12,7 +12,8 @@ export const Navbar: React.FC = () => {
   const location = useLocation();
   const { openCart, toggleSearch, isMobileMenuOpen, toggleMobileMenu } = useUIStore();
   const { openAuthModal, isAuthenticated, user } = useAuthStore();
-  const totalItems = useCartStore((state) => state.getTotalItems());
+  const items = useCartStore((state) => state.items);
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const { t } = useTranslation();
 
   useEffect(() => {

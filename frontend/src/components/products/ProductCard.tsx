@@ -7,6 +7,7 @@ import { formatIDR } from '@/lib/formatters';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useTranslation } from '@/i18n/useTranslation';
 
 interface ProductCardProps {
@@ -31,6 +32,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   const addItem = useCartStore((state) => state.addItem);
   const { toggleWishlist, isInWishlist } = useWishlistStore();
+  const token = useAuthStore((state) => state.token);
   const openCart = useUIStore((state) => state.openCart);
   const { t } = useTranslation();
 
@@ -40,7 +42,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     e.preventDefault();
     e.stopPropagation();
     const chosenSize = sizeChoice || selectedSize || product.sizes[0] || 'M';
-    addItem(product, activeColor, chosenSize, 1);
+    addItem(product, activeColor, chosenSize, 1, token);
     setAddedNotice(true);
     setTimeout(() => {
       setAddedNotice(false);
@@ -51,7 +53,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toggleWishlist(product.id);
+    toggleWishlist(product.id, token);
   };
 
   const aspectClass =

@@ -12,6 +12,7 @@ const JournalPage = lazy(() => import('@/pages/Journal/JournalPage').then(m => (
 const JournalDetailPage = lazy(() => import('@/pages/Journal/JournalDetailPage').then(m => ({ default: m.JournalDetailPage })));
 const AboutPage = lazy(() => import('@/pages/About/AboutPage').then(m => ({ default: m.AboutPage })));
 const AccountPage = lazy(() => import('@/pages/Account/AccountPage').then(m => ({ default: m.AccountPage })));
+const CheckoutPage = lazy(() => import('@/pages/Checkout/CheckoutPage').then(m => ({ default: m.CheckoutPage })));
 
 // Minimal loading fallback — matches the NOVAÉ dark aesthetic
 const PageLoader = () => (
@@ -32,12 +33,12 @@ const CustomerProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [isLoading, isAuthenticated, openAuthModal]);
 
-  if (isLoading) {
-    return <PageLoader />;
+  if (!isLoading && !isAuthenticated) {
+    return <Navigate to="/" replace />;
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+  if (isLoading) {
+    return <PageLoader />;
   }
 
   return <>{children}</>;
@@ -69,6 +70,7 @@ export const AppRoutes: React.FC = () => {
           <Route path="/journal" element={<JournalPage />} />
           <Route path="/journal/:slug" element={<JournalDetailPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
           <Route
             path="/account"
             element={

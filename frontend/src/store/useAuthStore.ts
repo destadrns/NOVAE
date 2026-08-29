@@ -45,6 +45,30 @@ function createMockJwt(userId: string, email: string, name: string) {
   return `${header}.${payload}.mock-signature-local-dev`;
 }
 
+import { useCartStore } from './useCartStore';
+import { useWishlistStore } from './useWishlistStore';
+
+// Helper to synchronize commerce state on login
+const syncCommerceState = async (token: string) => {
+  try {
+    await useCartStore.getState().mergeGuestCart(token);
+    await useCartStore.getState().fetchCart(token);
+    await useWishlistStore.getState().fetchWishlist(token);
+  } catch (err) {
+    console.error('Failed to sync commerce state on auth change', err);
+  }
+};
+
+// Helper to reset commerce state on signout
+const resetCommerceState = async () => {
+  try {
+    useWishlistStore.setState({ items: [], wishlistIds: [] });
+    await useCartStore.getState().fetchCart(null);
+  } catch (err) {
+    console.error('Failed to reset commerce state on signout', err);
+  }
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: null,
@@ -71,6 +95,7 @@ export const useAuthStore = create<AuthState>((set) => ({
               isAuthenticated: true,
               isLoading: false,
             });
+            syncCommerceState(token);
             return;
           }
 
@@ -84,6 +109,7 @@ export const useAuthStore = create<AuthState>((set) => ({
             status: 'active',
           };
           set({ user, token, isAuthenticated: true, isLoading: false });
+          syncCommerceState(token);
           return;
         }
       } else {
@@ -91,6 +117,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         if (stored) {
           const parsed = JSON.parse(stored);
           set({ user: parsed.user, token: parsed.token, isAuthenticated: true, isLoading: false });
+          if (parsed.token) {
+            syncCommerceState(parsed.token);
+          }
           return;
         }
       }
@@ -124,6 +153,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           status: 'active',
         };
         set({ user, token, isAuthenticated: true, isAuthModalOpen: false });
+        syncCommerceState(token);
         return { success: true };
       }
     }
@@ -143,6 +173,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       };
       localStorage.setItem('novae_customer_session', JSON.stringify({ user, token }));
       set({ user, token, isAuthenticated: true, isAuthModalOpen: false });
+      syncCommerceState(token);
       return { success: true };
     }
 
@@ -177,6 +208,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           status: 'active',
         };
         set({ user, token, isAuthenticated: true, isAuthModalOpen: false });
+        syncCommerceState(token);
         return { success: true };
       }
     }
@@ -194,6 +226,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     };
     localStorage.setItem('novae_customer_session', JSON.stringify({ user, token }));
     set({ user, token, isAuthenticated: true, isAuthModalOpen: false });
+    syncCommerceState(token);
     return { success: true };
   },
 
@@ -203,5 +236,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
     localStorage.removeItem('novae_customer_session');
     set({ user: null, token: null, isAuthenticated: false, isAuthModalOpen: false });
+    resetCommerceState();
   },
 }));

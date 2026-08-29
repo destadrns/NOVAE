@@ -5,6 +5,7 @@ import { PRODUCTS } from '@/data/products';
 import { formatIDR } from '@/lib/formatters';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useUIStore } from '@/store/useUIStore';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useTranslation } from '@/i18n/useTranslation';
@@ -24,6 +25,7 @@ export const ProductDetailPage: React.FC = () => {
   const addItem = useCartStore((state) => state.addItem);
   const openCart = useUIStore((state) => state.openCart);
   const { toggleWishlist, isInWishlist } = useWishlistStore();
+  const token = useAuthStore((state) => state.token);
 
   // Reset local state when navigating to a different product
   useEffect(() => {
@@ -40,7 +42,7 @@ export const ProductDetailPage: React.FC = () => {
   const handleAddToCart = () => {
     setIsAdding(true);
     setTimeout(() => {
-      addItem(rawProduct, selectedColor, selectedSize, 1);
+      addItem(rawProduct, selectedColor, selectedSize, 1, token);
       setIsAdding(false);
       setJustAdded(true);
       setTimeout(() => {
@@ -206,7 +208,7 @@ export const ProductDetailPage: React.FC = () => {
               </button>
 
               <button
-                onClick={() => toggleWishlist(product.id)}
+                onClick={() => toggleWishlist(product.id, token)}
                 className={`w-full py-3 border text-xs font-mono uppercase tracking-widest flex items-center justify-center gap-2 transition-colors ${
                   isFavorited
                     ? 'border-accent-lime text-accent-lime bg-accent-lime/5'

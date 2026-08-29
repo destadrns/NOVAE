@@ -86,17 +86,19 @@ NOVAÉ/
 ### Completed & Functional
 - **Database Layer**: Complete PostgreSQL lifecycle with 15 migrations, seed data, and a 112-assertion validation suite.
 - **Backend Foundation**: Centralized error envelopes, validation pipes, structured logging, CORS, Swagger docs, and health checks.
-- **Authentication & RBAC**: Supabase Auth integration with server-side profile provisioning and role guards.
+- **Authentication & RBAC**: Supabase Auth integration with server-side profile provisioning, optional guest auth, and role guards.
 - **Admin Catalog & Inventory API**: Transactional product CRUD, variant matrix management, stock adjustments, and inventory movement audit logs.
-- **Customer Storefront**: Responsive interface, bilingual switcher, Style Finder, product detail pages, and cart drawer UI.
+- **Commerce Subsystem (Cart & Wishlist)**: Persistent customer cart, polymorphic variant addition, guest-to-auth cart merge, and live wishlist synchronization.
+- **Phase 3A Checkout Experience**: Multi-step checkout (`/checkout`), shipping address form, courier selection, server-authoritative calculations, and order review.
+- **Customer Storefront**: Responsive interface, bilingual switcher, Style Finder, product detail pages, cart drawer, and client account portal.
 - **Admin Backoffice**: Live API connection, product catalog management, inventory matrix, stock adjustment modals, and movement history audit.
-- **Automated Tests**: 49 unit tests and 42 end-to-end integration tests passing with zero errors.
+- **Automated Tests**: 66 unit tests and 54 end-to-end integration tests passing with zero errors.
 
 ### Upcoming Milestones
-- **Phase 2**: Persistent customer cart and transactional order placement flow.
-- **Phase 3**: Payment gateway integration (Midtrans / Xendit) and courier logistics API integration.
-- **Phase 4**: Customer order status tracking and fulfillment management.
-- **Phase 5**: Full Journal editorial CMS and production cloud deployment.
+- **Phase 3B**: Transactional order creation (`POST /api/v1/orders`) and inventory reservation locking.
+- **Phase 4**: Payment gateway integration (Midtrans / Xendit) and courier logistics API integration.
+- **Phase 5**: Customer order status tracking and fulfillment management.
+- **Phase 6**: Full Journal editorial CMS and production cloud deployment.
 
 ---
 
@@ -162,10 +164,10 @@ npm run dev:admin -- --port 3002
 ## Testing & Quality Assurance
 
 ```bash
-# Run backend unit tests (49 tests)
+# Run backend unit tests (66 tests)
 npm --prefix backend run test
 
-# Run backend end-to-end tests (42 tests)
+# Run backend end-to-end tests (54 tests)
 npm --prefix backend run test:e2e
 
 # Run database validation suite (112 assertions)
@@ -176,17 +178,6 @@ npm --prefix backend run build
 npm run build:frontend
 npm run build:admin
 ```
-
----
-
-## Documentation
-
-For in-depth specifications and architectural references, see:
-
-- [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md) — Consolidated technical architecture, API overview, and test verification report.
-- [NOVAE_PRD_v1.2.md](NOVAE_PRD_v1.2.md) — Product requirements document, design principles, and user journeys.
-- [NOVAE_DATABASE_SCHEMA.md](NOVAE_DATABASE_SCHEMA.md) — Complete PostgreSQL schema, table models, constraints, and migration rules.
-- [NOVAE_BACKEND_SPEC.md](NOVAE_BACKEND_SPEC.md) — Backend architecture, authentication contracts, and endpoint specifications.
 
 ---
 

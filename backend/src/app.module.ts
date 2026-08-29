@@ -7,6 +7,8 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { InventoryModule } from './inventory/inventory.module';
+import { CartModule } from './cart/cart.module';
+import { WishlistModule } from './wishlist/wishlist.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { InventoryModule } from './inventory/inventory.module';
     AuthModule,
     CatalogModule,
     InventoryModule,
+    CartModule,
+    WishlistModule,
   ],
 })
 export class AppModule {}
