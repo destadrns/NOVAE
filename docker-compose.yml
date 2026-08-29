@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: novae_postgres
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: novae
+      POSTGRES_PASSWORD: novae_secret
+      POSTGRES_DB: novae_dev
+    volumes:
+      - novae_pgdata:/var/lib/postgresql/data
+
+volumes:
+  novae_pgdata:

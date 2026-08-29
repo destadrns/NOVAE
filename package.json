@@ -1,0 +1,28 @@
+{
+  "name": "novae-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NOVAÉ — Digital-First Contemporary Fashion (Frontend & Backend Monorepo)",
+  "workspaces": [
+    "frontend",
+    "admin",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "preview:frontend": "npm --prefix frontend run preview",
+    "dev:admin": "npm --prefix admin run dev",
+    "build:admin": "npm --prefix admin run build",
+    "preview:admin": "npm --prefix admin run preview",
+    "dev:backend": "npm --prefix backend run dev"
+  },
+  "keywords": [
+    "novae",
+    "fashion",
+    "ecommerce"
+  ],
+  "author": "",
+  "license": "ISC"
+}

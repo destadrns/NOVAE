@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+*/node_modules/
+.pnp
+.pnp.js
+
+# Production build outputs
+dist/
+*/dist/
+build/
+*/build/
+out/
+*/out/
+
+# Environment and Secret Files (NEVER COMMIT)
+.env
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+*.cert
+*.crt
+
+# Internal Developer & Architecture Documentation (Private Specs)
+*.md
+!README.md
+claudedocs/
+brain/
+.agents/
+.gemini/
+.system_generated/
+
+# Logs & Debugging
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Test Coverage & Runtime Artifacts
+coverage/
+*/coverage/
+.nyc_output/
+.tempmediaStorage/
+
+# Editor, OS & Cache
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.eslintcache
+.turbo/
+.parcel-cache/

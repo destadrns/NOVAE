@@ -1,0 +1,246 @@
+const metaEnv = (import.meta as unknown as { env?: Record<string, string> }).env || {};
+export const API_BASE_URL = metaEnv.VITE_API_URL || 'http://localhost:3001/api/v1';
+
+export interface ApiError {
+  statusCode: number;
+  message: string | string[];
+  error?: string;
+}
+
+export async function fetchWithAuth<T>(
+  path: string,
+  token?: string | null,
+  options: RequestInit = {},
+): Promise<{ data: T | null; error: ApiError | null }> {
+  const url = `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const res = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    const body = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      return {
+        data: null,
+        error: {
+          statusCode: res.status,
+          message: body?.message || res.statusText || 'API Request failed',
+          error: body?.error,
+        },
+      };
+    }
+
+    return { data: body as T, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: {
+        statusCode: 500,
+        message: (err as Error).message || 'Network error connecting to backend',
+        error: 'NetworkError',
+      },
+    };
+  }
+}
+
+// ------------------------------------------------------------------
+// AUTH API
+// ------------------------------------------------------------------
+export async function verifyAdminSession(token: string) {
+  return fetchWithAuth<{
+    id: string;
+    email: string;
+    fullName: string;
+    role: string;
+    status: string;
+    avatarUrl?: string | null;
+  }>('/admin/me', token);
+}
+
+// ------------------------------------------------------------------
+// ADMIN CATALOG TYPES & APIS
+// ------------------------------------------------------------------
+export interface BackendCategory {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+  sortOrder: number;
+}
+
+export interface BackendCollection {
+  id: string;
+  code: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+  coverImageUrl?: string | null;
+  status: string;
+  sortOrder: number;
+  productsCount?: number;
+  translations?: Array<{
+    id: string;
+    language: 'id' | 'en';
+    name: string;
+    description?: string | null;
+  }>;
+}
+
+export interface BackendVariant {
+  id: string;
+  sku: string;
+  colorName: string;
+  colorCode?: string | null;
+  size: string;
+  priceOverrideIdr?: number | null;
+  status: 'active' | 'inactive' | 'archived';
+  imageUrl?: string | null;
+  stock?: number;
+}
+
+export interface BackendProductTranslation {
+  id?: string;
+  language: 'id' | 'en';
+  name: string;
+  shortDescription?: string | null;
+  description?: string | null;
+  materialDescription?: string | null;
+  provenanceText?: string | null;
+}
+
+export interface BackendProductImage {
+  id?: string;
+  imageUrl: string;
+  altText?: string | null;
+  sortOrder?: number;
+  isPrimary?: boolean;
+}
+
+export interface BackendAdminProduct {
+  id: string;
+  skuRoot: string;
+  slug: string;
+  name: string;
+  basePriceIdr: number;
+  status: 'draft' | 'active' | 'archived';
+  featured: boolean;
+  isNewDrop: boolean;
+  limitedRun: boolean;
+  featuredRank?: number | null;
+  primaryImageUrl?: string | null;
+  totalStock: number;
+  variantsCount: number;
+  category: BackendCategory;
+  collection?: BackendCollection | null;
+  translations: BackendProductTranslation[];
+  variants: BackendVariant[];
+  images?: BackendProductImage[];
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminProductsQuery {
+  search?: string;
+  category?: string;
+  collection?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}
+
+export async function adminGetProducts(token: string | null, query: AdminProductsQuery = {}) {
+  const params = new URLSearchParams();
+  if (query.search) params.append('search', query.search);
+  if (query.category && query.category !== 'ALL') params.append('category', query.category);
+  if (query.collection && query.collection !== 'ALL') params.append('collection', query.collection);
+  if (query.status && query.status !== 'ALL') params.append('status', query.status);
+  if (query.page) params.append('page', String(query.page));
+  if (query.limit) params.append('limit', String(query.limit));
+
+  const queryString = params.toString();
+  const path = `/admin/products${queryString ? `?${queryString}` : ''}`;
+
+  return fetchWithAuth<{
+    data: BackendAdminProduct[];
+    meta: {
+      page: number;
+      limit: number;
+      totalItems: number;
+      totalPages: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
+  }>(path, token);
+}
+
+export async function adminGetProductById(token: string | null, id: string) {
+  return fetchWithAuth<BackendAdminProduct>(`/admin/products/${id}`, token);
+}
+
+export async function adminCreateProduct(token: string | null, payload: any) {
+  return fetchWithAuth<BackendAdminProduct>('/admin/products', token, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminUpdateProduct(token: string | null, id: string, payload: any) {
+  return fetchWithAuth<BackendAdminProduct>(`/admin/products/${id}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminArchiveProduct(token: string | null, id: string) {
+  return fetchWithAuth<{ message: string; id: string; status: string }>(
+    `/admin/products/${id}`,
+    token,
+    {
+      method: 'DELETE',
+    },
+  );
+}
+
+export async function adminCreateVariant(token: string | null, productId: string, payload: any) {
+  return fetchWithAuth<BackendVariant>(`/admin/products/${productId}/variants`, token, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminUpdateVariant(token: string | null, variantId: string, payload: any) {
+  return fetchWithAuth<BackendVariant>(`/admin/variants/${variantId}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminDeleteVariant(token: string | null, variantId: string) {
+  return fetchWithAuth<{ message: string; id: string; status?: string }>(
+    `/admin/variants/${variantId}`,
+    token,
+    {
+      method: 'DELETE',
+    },
+  );
+}
+
+export async function adminGetCollections(token: string | null) {
+  return fetchWithAuth<BackendCollection[]>('/admin/collections', token);
+}
+
+export async function adminGetCategories(token?: string | null) {
+  return fetchWithAuth<BackendCategory[]>('/categories', token);
+}
