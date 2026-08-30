@@ -24,6 +24,7 @@ Admin App ──────────┘
 ## Preview
 
 ### Customer Storefront & Catalog
+
 Cinematic hero showcase featuring brutalist typography, atmospheric soundscapes, inertial smooth scrolling with Lenis, and chapter-based collection discovery (`FORM`, `MOTION`, `IDENTITY`).
 
 ![NOVAÉ Storefront](docs/screenshots/storefront.png)
@@ -31,6 +32,7 @@ Cinematic hero showcase featuring brutalist typography, atmospheric soundscapes,
 ---
 
 ### Product Detail & Variant Matrix
+
 Studio photography gallery, dynamic color swatches, size availability selectors, fabric provenance specifications, and real-time inventory state badges.
 
 ![NOVAÉ Product Detail](docs/screenshots/product-detail.png)
@@ -38,6 +40,7 @@ Studio photography gallery, dynamic color swatches, size availability selectors,
 ---
 
 ### Style Finder Personalization
+
 Interactive multi-step questionnaire that translates aesthetic preferences and silhouette signals into tailored wardrobe recommendations.
 
 ![NOVAÉ Style Finder](docs/screenshots/style-finder.png)
@@ -45,6 +48,7 @@ Interactive multi-step questionnaire that translates aesthetic preferences and s
 ---
 
 ### Checkout & Simulated Payment
+
 Multi-step checkout flow with shipping address capture, courier selection, server-authoritative pricing snapshots, and an interactive payment simulator modal.
 
 ![NOVAÉ Checkout & Order Summary](docs/screenshots/checkout.png)
@@ -52,6 +56,7 @@ Multi-step checkout flow with shipping address capture, courier selection, serve
 ---
 
 ### Atelier Operations Dashboard
+
 Backoffice dashboard presenting real-time business telemetry, revenue trends, capsule sales distributions, customer counts, and low-stock alerts.
 
 ![NOVAÉ Atelier Operations Dashboard](docs/screenshots/admin-dashboard.png)
@@ -59,6 +64,7 @@ Backoffice dashboard presenting real-time business telemetry, revenue trends, ca
 ---
 
 ### Inventory Management & SKU Matrix
+
 Warehouse inventory matrix tracking physical vs reserved stock allocation, depletion thresholds, restock actions, and movement audit logs.
 
 ![NOVAÉ SKU Matrix & Inventory Operations](docs/screenshots/admin-inventory.png)
@@ -100,6 +106,7 @@ NOVAÉ/
 ## Technology Stack
 
 ### Frontend & Admin
+
 - **Framework**: React 18, Vite, TypeScript
 - **Styling**: Tailwind CSS, Vanilla CSS design tokens
 - **Animation & Motion**: GSAP, ScrollTrigger, Framer Motion, Lenis
@@ -107,17 +114,20 @@ NOVAÉ/
 - **Icons**: Lucide React
 
 ### Backend API
+
 - **Framework**: NestJS, TypeScript, Express
 - **ORM & Database**: Prisma ORM, PostgreSQL (via Docker or local instance)
 - **Validation**: class-validator, class-transformer
 - **API Documentation**: OpenAPI / Swagger (`@nestjs/swagger`)
 
 ### Authentication & Security
+
 - **Identity Provider**: Supabase Auth
 - **Token Verification**: Passport JWT, jsonwebtoken
 - **Authorization**: NestJS Guards (`SupabaseAuthGuard`, `RolesGuard`)
 
 ### Testing & Quality Assurance
+
 - **Unit & Integration Testing**: Jest, Supertest
 - **In-Memory PostgreSQL Engine**: PGlite (for standalone database tests)
 - **Database Validation**: 112-assertion migration and constraint verification suite
@@ -190,6 +200,7 @@ Journal CMS (Create, Edit, Publish, Preview & Archive Bilingual Articles)
 ## Current Status
 
 ### Implemented & Functional
+
 - **Database Architecture**: PostgreSQL schema with 15 SQL migrations, deterministic seed data, and a 112-assertion validation suite.
 - **Backend REST API**: Centralized error envelopes, validation pipes, structured logging, CORS, Swagger documentation, and health check probes.
 - **Authentication & RBAC**: Supabase Auth integration, server-side profile provisioning, and role guards (`SupabaseAuthGuard`, `RolesGuard`).
@@ -206,6 +217,7 @@ Journal CMS (Create, Edit, Publish, Preview & Archive Bilingual Articles)
 - **Automated Verification**: 105 unit tests (11 suites) and 95 end-to-end integration tests (10 suites) passing with zero errors.
 
 ### Upcoming Development
+
 - Printable order invoices and packing slips
 - CSV export for financial and inventory reports
 - Rich-text / Markdown editor for Journal CMS
@@ -218,6 +230,7 @@ Journal CMS (Create, Edit, Publish, Preview & Archive Bilingual Articles)
 ## Getting Started
 
 ### Prerequisites
+
 - **Node.js**: `v18.x` or higher
 - **npm**: `v9.x` or higher
 - **Docker & Docker Compose** (for PostgreSQL database) or a local PostgreSQL instance (`v15+`)
@@ -241,6 +254,7 @@ npm install
 Create `.env` files in each project directory:
 
 #### Backend (`backend/.env`)
+
 ```ini
 NODE_ENV=development
 PORT=3001
@@ -255,6 +269,7 @@ SUPABASE_JWT_SECRET="your-supabase-jwt-secret-min-32-chars"
 ```
 
 #### Customer Frontend (`frontend/.env`)
+
 ```ini
 VITE_API_URL="http://localhost:3001/api/v1"
 VITE_SUPABASE_URL="https://your-supabase-project.supabase.co"
@@ -262,6 +277,7 @@ VITE_SUPABASE_ANON_KEY="your-supabase-anon-key"
 ```
 
 #### Admin App (`admin/.env`)
+
 ```ini
 VITE_API_URL="http://localhost:3001/api/v1"
 VITE_SUPABASE_URL="https://your-supabase-project.supabase.co"
