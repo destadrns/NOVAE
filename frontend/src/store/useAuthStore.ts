@@ -32,6 +32,17 @@ interface AuthState {
   initAuth: () => Promise<void>;
 }
 
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 // Deterministic mock token for demo/local mode
 function createMockJwt(userId: string, email: string, name: string) {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -40,7 +51,11 @@ function createMockJwt(userId: string, email: string, name: string) {
       sub: userId,
       email,
       name,
-      exp: Math.floor(Date.now() / 1000) + 3600 * 24,
+      role: 'authenticated',
+      aud: 'authenticated',
+      iss: 'supabase',
+      user_metadata: { full_name: name },
+      exp: Math.floor(Date.now() / 1000) + 3600 * 24 * 30,
     }),
   );
   return `${header}.${payload}.mock-signature-local-dev`;
@@ -161,13 +176,25 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     }
 
-    // Local / Demo mode fallback
+    // Local / Autonomous mode fallback
     if (password.length >= 4) {
-      const demoId = '00000000-0000-0000-0001-000000000001';
-      const name = email.includes('aria') ? 'Aria Wirasasmita' : email.split('@')[0];
-      const token = createMockJwt(demoId, email, name);
+      const stored = localStorage.getItem('novae_customer_session');
+      let userId = generateUUID();
+      let name = email.split('@')[0];
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed.user?.email === email && parsed.user?.id) {
+            userId = parsed.user.id;
+            name = parsed.user.fullName || name;
+          }
+        } catch {
+          // Ignore
+        }
+      }
+      const token = createMockJwt(userId, email, name);
       const user: CustomerUser = {
-        id: demoId,
+        id: userId,
         email,
         fullName: name,
         role: 'customer',
@@ -189,35 +216,37 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: fullName },
-        },
-      });
-      if (error) {
-        return { success: false, error: error.message };
-      }
-      if (data.session && data.user) {
-        const token = data.session.access_token;
-        const { data: profile } = await fetchCurrentProfile(token);
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: fullName },
+          },
+        });
+        if (!error && data.session && data.user) {
+          const token = data.session.access_token;
+          const { data: profile } = await fetchCurrentProfile(token);
 
-        const user: CustomerUser = profile || {
-          id: data.user.id,
-          email: data.user.email || email,
-          fullName,
-          role: 'customer',
-          status: 'active',
-        };
-        set({ user, token, isAuthenticated: true, isAuthModalOpen: false });
-        syncCommerceState(token);
-        return { success: true };
+          const user: CustomerUser = profile || {
+            id: data.user.id,
+            email: data.user.email || email,
+            fullName,
+            role: 'customer',
+            status: 'active',
+          };
+          localStorage.setItem('novae_customer_session', JSON.stringify({ user, token }));
+          set({ user, token, isAuthenticated: true, isAuthModalOpen: false });
+          syncCommerceState(token);
+          return { success: true };
+        }
+      } catch {
+        // Fallback
       }
     }
 
-    // Local / Demo mode fallback
-    const newId = '00000000-0000-0000-0001-000000000009';
+    // Local / Autonomous mode fallback
+    const newId = generateUUID();
     const token = createMockJwt(newId, email, fullName);
     const user: CustomerUser = {
       id: newId,

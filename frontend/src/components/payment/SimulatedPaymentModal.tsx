@@ -339,27 +339,130 @@ export const SimulatedPaymentModal: React.FC<SimulatedPaymentModalProps> = ({
                 </label>
 
                 {selectedMethod === 'qris' ? (
-                  /* QRIS Simulation Box */
-                  <div className="p-6 bg-obsidian border border-white/10 rounded-sm text-center space-y-4">
-                    <div className="inline-block p-4 bg-white rounded-sm shadow-xl relative">
-                      {/* Stylized QR Code placeholder */}
-                      <div className="w-36 h-36 border-4 border-black p-2 flex flex-col justify-between items-center bg-white">
-                        <div className="flex justify-between w-full">
-                          <div className="w-7 h-7 bg-black p-1"><div className="w-full h-full bg-white p-0.5"><div className="w-full h-full bg-black" /></div></div>
-                          <div className="w-7 h-7 bg-black p-1"><div className="w-full h-full bg-white p-0.5"><div className="w-full h-full bg-black" /></div></div>
+                  /* High Fidelity QRIS Simulation Box */
+                  <div className="p-5 bg-obsidian border border-white/10 rounded-sm text-center space-y-4">
+                    <div className="inline-block p-4 sm:p-5 bg-white text-black rounded-sm shadow-2xl relative max-w-[280px] w-full mx-auto">
+                      {/* Indonesian Standard QRIS Header */}
+                      <div className="flex items-center justify-between border-b-2 border-black/80 pb-2 mb-3">
+                        <div className="text-left">
+                          <span className="text-[13px] font-black tracking-tighter block leading-none font-sans text-rose-600">
+                            QRIS
+                          </span>
+                          <span className="text-[7px] font-mono tracking-tight font-bold text-black uppercase block">
+                            Pembayaran Digital
+                          </span>
                         </div>
-                        <div className="text-[9px] font-mono text-black font-extrabold tracking-widest">
-                          NOVAÉ QRIS
-                        </div>
-                        <div className="flex justify-between w-full">
-                          <div className="w-7 h-7 bg-black p-1"><div className="w-full h-full bg-white p-0.5"><div className="w-full h-full bg-black" /></div></div>
-                          <div className="w-3 h-3 bg-black self-end" />
+                        <div className="text-right">
+                          <span className="text-[8px] font-mono font-extrabold uppercase tracking-widest text-black/60 block">
+                            GPN
+                          </span>
+                          <span className="text-[7px] font-mono text-black/40 block">
+                            NMID: ID10202688001
+                          </span>
                         </div>
                       </div>
+
+                      {/* Merchant Details */}
+                      <div className="text-center mb-2">
+                        <span className="text-[11px] font-mono font-extrabold uppercase tracking-wider block text-black">
+                          NOVAÉ ATELIER
+                        </span>
+                        <span className="text-[8px] font-mono text-black/60 block">
+                          Atelier Garments & Couture Archival
+                        </span>
+                      </div>
+
+                      {/* Authentic SVG QR Code Matrix */}
+                      <div className="relative p-2 bg-white border-2 border-black rounded-sm flex items-center justify-center">
+                        <svg
+                          viewBox="0 0 200 200"
+                          className="w-44 h-44 sm:w-48 sm:h-48 text-black"
+                          fill="currentColor"
+                        >
+                          {/* Corner Finder Patterns */}
+                          {/* Top-Left */}
+                          <rect x="10" y="10" width="50" height="50" rx="4" />
+                          <rect x="20" y="20" width="30" height="30" fill="white" rx="2" />
+                          <rect x="28" y="28" width="14" height="14" rx="2" />
+
+                          {/* Top-Right */}
+                          <rect x="140" y="10" width="50" height="50" rx="4" />
+                          <rect x="150" y="20" width="30" height="30" fill="white" rx="2" />
+                          <rect x="158" y="28" width="14" height="14" rx="2" />
+
+                          {/* Bottom-Left */}
+                          <rect x="10" y="140" width="50" height="50" rx="4" />
+                          <rect x="20" y="150" width="30" height="30" fill="white" rx="2" />
+                          <rect x="28" y="158" width="14" height="14" rx="2" />
+
+                          {/* Alignment & Timing Data Pattern */}
+                          <rect x="70" y="20" width="8" height="8" />
+                          <rect x="90" y="20" width="12" height="8" />
+                          <rect x="115" y="20" width="8" height="8" />
+                          <rect x="70" y="40" width="16" height="8" />
+                          <rect x="95" y="40" width="8" height="16" />
+                          <rect x="110" y="40" width="14" height="8" />
+
+                          {/* Center Matrix */}
+                          <rect x="20" y="70" width="12" height="8" />
+                          <rect x="40" y="70" width="8" height="16" />
+                          <rect x="60" y="70" width="16" height="8" />
+                          <rect x="85" y="65" width="30" height="30" rx="3" />
+                          <rect x="90" y="70" width="20" height="20" fill="white" />
+                          <rect x="94" y="74" width="12" height="12" fill="#d8ff00" />
+                          <rect x="125" y="70" width="14" height="8" />
+                          <rect x="150" y="70" width="8" height="14" />
+                          <rect x="170" y="70" width="14" height="8" />
+
+                          <rect x="20" y="95" width="8" height="16" />
+                          <rect x="35" y="95" width="16" height="8" />
+                          <rect x="60" y="90" width="14" height="16" />
+                          <rect x="125" y="90" width="16" height="16" />
+                          <rect x="150" y="95" width="14" height="8" />
+                          <rect x="170" y="95" width="8" height="16" />
+
+                          {/* Lower Matrix */}
+                          <rect x="70" y="125" width="12" height="8" />
+                          <rect x="90" y="120" width="16" height="16" />
+                          <rect x="115" y="125" width="14" height="8" />
+                          <rect x="70" y="150" width="16" height="8" />
+                          <rect x="95" y="145" width="8" height="16" />
+                          <rect x="110" y="150" width="14" height="8" />
+                          <rect x="70" y="170" width="12" height="14" />
+                          <rect x="90" y="170" width="16" height="8" />
+                          <rect x="115" y="170" width="14" height="14" />
+                          <rect x="140" y="140" width="12" height="12" />
+                          <rect x="160" y="140" width="14" height="8" />
+                          <rect x="140" y="160" width="8" height="16" />
+                          <rect x="160" y="160" width="14" height="14" />
+                        </svg>
+
+                        {/* Center Badge */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center border-2 border-white shadow-md">
+                            <span className="text-[8px] font-mono font-bold text-accent-lime">NÉ</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Nominal Total Tagihan */}
+                      <div className="mt-3 pt-2 border-t border-black/10 text-center">
+                        <span className="text-[8px] font-mono uppercase tracking-widest text-black/50 block">
+                          Total Pembayaran
+                        </span>
+                        <span className="text-sm font-mono font-extrabold text-black block tracking-tight">
+                          {formatIDR(currentOrder.totalIdr)}
+                        </span>
+                      </div>
                     </div>
+
                     <div className="text-xs font-mono text-muted space-y-1">
-                      <span className="text-bone font-bold block">Scan dengan GoPay, BCA, OVO, atau ShopeePay</span>
-                      <span>Batas Waktu Pembayaran: <strong className="text-accent-lime">23:59:59</strong></span>
+                      <span className="text-bone font-semibold block">
+                        Pindai QRIS dengan GoPay, BCA, OVO, ShopeePay, atau Bank App
+                      </span>
+                      <span className="text-[11px] text-muted-light block">
+                        Batas Waktu: <strong className="text-accent-lime">23:59:59</strong> • Verifikasi Otomatis
+                      </span>
                     </div>
                   </div>
                 ) : selectedMethod === 'credit_card' ? (
