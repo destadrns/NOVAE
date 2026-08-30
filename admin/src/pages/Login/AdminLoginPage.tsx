@@ -42,12 +42,6 @@ export const AdminLoginPage: React.FC = () => {
     }
   };
 
-  const handleDemoFill = () => {
-    setEmail('admin@novae.atelier');
-    setPassword('novae2026');
-    setError('');
-  };
-
   return (
     <div className="min-h-screen bg-obsidian text-bone flex flex-col justify-center items-center p-4 sm:p-6 relative overflow-hidden select-none">
       {/* Subtle Background Glow */}
@@ -105,21 +99,12 @@ export const AdminLoginPage: React.FC = () => {
           </div>
 
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label
-                htmlFor="password"
-                className="block text-[11px] font-mono uppercase tracking-widest text-muted"
-              >
-                {t.auth.passwordLabel}
-              </label>
-              <button
-                type="button"
-                onClick={handleDemoFill}
-                className="text-[10px] font-mono uppercase tracking-wider text-accent-lime hover:underline"
-              >
-                {t.auth.demoKeyBtn}
-              </button>
-            </div>
+            <label
+              htmlFor="password"
+              className="block text-[11px] font-mono uppercase tracking-widest text-muted"
+            >
+              {t.auth.passwordLabel}
+            </label>
             <div className="relative flex items-center">
               <Lock className="w-4 h-4 text-muted absolute left-3 pointer-events-none" />
               <input

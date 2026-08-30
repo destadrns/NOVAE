@@ -50,13 +50,6 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  const handleDemoFill = () => {
-    setEmail('aria.wirasasmita@example.com');
-    setPassword('novae2026');
-    setFullName('Aria Wirasasmita');
-    setError('');
-  };
-
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-obsidian/80 backdrop-blur-md animate-fade-in">
       <div className="relative w-full max-w-md bg-charcoal border border-white/10 rounded-sm shadow-2xl p-6 sm:p-8 text-bone space-y-6">
@@ -204,20 +197,9 @@ export const AuthModal: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <label className="block text-[10px] font-mono uppercase tracking-widest text-muted-light">
-                    {isId ? 'Kata Sandi' : 'Password'}
-                  </label>
-                  {authModalMode === 'signin' && (
-                    <button
-                      type="button"
-                      onClick={handleDemoFill}
-                      className="text-[10px] font-mono text-accent-lime hover:underline"
-                    >
-                      {isId ? 'Gunakan Demo' : 'Use Demo'}
-                    </button>
-                  )}
-                </div>
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-muted-light">
+                  {isId ? 'Kata Sandi' : 'Password'}
+                </label>
                 <div className="relative flex items-center">
                   <Lock className="w-4 h-4 text-muted-light absolute left-3 pointer-events-none" />
                   <input
