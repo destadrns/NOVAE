@@ -415,41 +415,72 @@ export interface ApiProductItem {
   }>;
 }
 
+import { PRODUCTS } from '@/data/products';
+
 export function mapApiProductToFrontend(apiProd: any) {
+  const fallback = PRODUCTS.find(
+    (p) =>
+      p.id.toLowerCase() === (apiProd.id || '').toLowerCase() ||
+      p.slug.toLowerCase() === (apiProd.slug || '').toLowerCase(),
+  );
+
   const colors =
     apiProd.colors && apiProd.colors.length > 0
       ? apiProd.colors.map((c: any) => ({ name: c.name, hex: c.hex || c.code || '#0B0C0E' }))
-      : [{ name: 'Standard', hex: '#0B0C0E' }];
+      : fallback?.colors || [{ name: 'Standard', hex: '#0B0C0E' }];
+
   const sizes =
-    apiProd.sizes && apiProd.sizes.length > 0 ? apiProd.sizes : ['S', 'M', 'L', 'XL'];
-  const images =
-    apiProd.images && apiProd.images.length > 0
-      ? apiProd.images
-      : [apiProd.primaryImageUrl || 'https://images.unsplash.com/photo-1544441893-675973e31985'];
+    apiProd.sizes && apiProd.sizes.length > 0 ? apiProd.sizes : fallback?.sizes || ['S', 'M', 'L', 'XL'];
+
+  let images: string[] = [];
+  if (Array.isArray(apiProd.images) && apiProd.images.length > 0) {
+    images = apiProd.images
+      .map((img: any) => (typeof img === 'string' ? img : img.imageUrl || img.url))
+      .filter(Boolean);
+  } else if (apiProd.primaryImageUrl) {
+    images = [apiProd.primaryImageUrl];
+    if (fallback?.images) {
+      fallback.images.forEach((img) => {
+        if (!images.includes(img)) images.push(img);
+      });
+    }
+  } else if (fallback?.images && fallback.images.length > 0) {
+    images = fallback.images;
+  } else {
+    images = [
+      'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=800',
+      'https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=800',
+    ];
+  }
+
+  // Ensure at least 2 images for smooth crossfade hover
+  if (images.length === 1 && fallback?.images?.[1]) {
+    images.push(fallback.images[1]);
+  }
 
   return {
-    id: apiProd.id,
-    name: apiProd.name || apiProd.skuRoot,
-    slug: apiProd.slug,
-    tagline: apiProd.shortDescription || apiProd.description || '',
-    description: apiProd.description || apiProd.shortDescription || '',
-    price: Number(apiProd.basePriceIdr) || 0,
-    category: (apiProd.categoryName || apiProd.category?.name || apiProd.category?.slug || 'Outerwear') as any,
-    collection: (apiProd.collectionName || apiProd.collection?.code || apiProd.collection?.name || 'FORM') as any,
+    id: apiProd.id || fallback?.id || 'prod-item',
+    name: apiProd.name || fallback?.name || apiProd.skuRoot || 'NOVAÉ Piece',
+    slug: apiProd.slug || fallback?.slug || 'item',
+    tagline: apiProd.shortDescription || fallback?.tagline || apiProd.description || '',
+    description: apiProd.description || fallback?.description || apiProd.shortDescription || '',
+    price: Number(apiProd.basePriceIdr) || fallback?.price || 0,
+    category: (apiProd.categoryName || apiProd.category?.name || fallback?.category || 'Outerwear') as any,
+    collection: (apiProd.collectionName || apiProd.collection?.code || apiProd.collection?.name || fallback?.collection || 'FORM') as any,
     images,
     colors,
     sizes,
-    stock: apiProd.totalStock ?? apiProd.stock ?? 20,
-    tags: apiProd.tags || [],
-    featured: Boolean(apiProd.featured),
-    newArrival: Boolean(apiProd.isNewDrop),
+    stock: apiProd.totalStock ?? apiProd.stock ?? fallback?.stock ?? 20,
+    tags: apiProd.tags || fallback?.tags || [],
+    featured: Boolean(apiProd.featured ?? fallback?.featured),
+    newArrival: Boolean(apiProd.isNewDrop ?? fallback?.newArrival),
     details: {
-      material: apiProd.materialDescription || 'Curated Atelier Fabric',
-      fit: 'Sculptural Tailored Cut',
-      care: 'Dry clean only.',
-      origin: apiProd.provenanceText || 'Crafted in Atelier Bandung',
+      material: apiProd.materialDescription || fallback?.details?.material || 'Curated Atelier Fabric',
+      fit: fallback?.details?.fit || 'Sculptural Tailored Cut',
+      care: fallback?.details?.care || 'Dry clean only.',
+      origin: apiProd.provenanceText || fallback?.details?.origin || 'Crafted in Atelier Bandung',
     },
-    variants: apiProd.variants || [],
+    variants: apiProd.variants || (fallback as any)?.variants || [],
   };
 }
 

@@ -78,11 +78,20 @@ export const CollectionsPage: React.FC = () => {
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {liveProducts
-                  .filter(
-                    (p) =>
-                      p.collection.toLowerCase() === selectedCol.name.toLowerCase() ||
-                      p.collection.toLowerCase() === selectedCol.code.toLowerCase(),
-                  )
+                  .filter((p) => {
+                    const pCol = (p.collection || '').toLowerCase();
+                    const cName = (selectedCol.name || '').toLowerCase();
+                    const cCode = (selectedCol.code || '').toLowerCase();
+                    const cId = (selectedCol.id || '').toLowerCase();
+                    return (
+                      pCol === cName ||
+                      pCol === cCode ||
+                      pCol === cId ||
+                      (cId === 'form' && (pCol.includes('form') || pCol.includes('halo'))) ||
+                      (cId === 'motion' && pCol.includes('motion')) ||
+                      (cId === 'identity' && pCol.includes('identity'))
+                    );
+                  })
                   .map((product) => (
                     <ProductCard key={product.id} product={getLocalizedProduct(product)} />
                   ))}

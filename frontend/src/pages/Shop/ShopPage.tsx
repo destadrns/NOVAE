@@ -15,6 +15,8 @@ export const ShopPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('featured');
   const { t, getLocalizedProduct } = useTranslation();
 
+  const liveCollections = useCatalogStore((state) => state.collections);
+
   const categories = [
     { key: 'All', label: t.shop.categories.All },
     { key: 'Outerwear', label: t.shop.categories.Outerwear },
@@ -23,7 +25,15 @@ export const ShopPage: React.FC = () => {
     { key: 'Accessories', label: t.shop.categories.Accessories },
   ];
 
-  const collections = ['All', 'FORM', 'MOTION', 'IDENTITY'] as const;
+  const collectionOptions = useMemo(() => {
+    return [
+      { key: 'All', label: t.shop.collections.All || 'All Series' },
+      ...liveCollections.map((c) => ({
+        key: c.code || c.id,
+        label: `SERIES ${c.code || c.name}`,
+      })),
+    ];
+  }, [liveCollections, t]);
 
   const filteredProducts = useMemo(() => {
     const matched = liveProducts
@@ -31,9 +41,16 @@ export const ShopPage: React.FC = () => {
         const matchCat =
           selectedCategory === 'All' ||
           p.category.toLowerCase() === selectedCategory.toLowerCase();
+        const pCol = (p.collection || '').toLowerCase();
+        const selCol = selectedCollection.toLowerCase();
         const matchCol =
           selectedCollection === 'All' ||
-          p.collection.toLowerCase() === selectedCollection.toLowerCase();
+          pCol === selCol ||
+          (selCol === 'form' && (pCol.includes('form') || pCol.includes('halo'))) ||
+          (selCol === 'motion' && pCol.includes('motion')) ||
+          (selCol === 'identity' && pCol.includes('identity')) ||
+          pCol.includes(selCol) ||
+          selCol.includes(pCol);
         return matchCat && matchCol;
       })
       .sort((a, b) => {
@@ -93,9 +110,9 @@ export const ShopPage: React.FC = () => {
                 onChange={(e) => setSelectedCollection(e.target.value)}
                 className="bg-charcoal border border-white/15 text-bone text-xs uppercase px-2.5 sm:px-3 py-1.5 sm:py-2 focus:outline-none focus:border-accent-lime"
               >
-                {collections.map((col) => (
-                  <option key={col} value={col}>
-                    {t.shop.collections[col]}
+                {collectionOptions.map((col) => (
+                  <option key={col.key} value={col.key}>
+                    {col.label}
                   </option>
                 ))}
               </select>
