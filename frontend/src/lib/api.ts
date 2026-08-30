@@ -418,7 +418,7 @@ export interface ApiProductItem {
 export function mapApiProductToFrontend(apiProd: any) {
   const colors =
     apiProd.colors && apiProd.colors.length > 0
-      ? apiProd.colors
+      ? apiProd.colors.map((c: any) => ({ name: c.name, hex: c.hex || c.code || '#0B0C0E' }))
       : [{ name: 'Standard', hex: '#0B0C0E' }];
   const sizes =
     apiProd.sizes && apiProd.sizes.length > 0 ? apiProd.sizes : ['S', 'M', 'L', 'XL'];
@@ -434,8 +434,8 @@ export function mapApiProductToFrontend(apiProd: any) {
     tagline: apiProd.shortDescription || apiProd.description || '',
     description: apiProd.description || apiProd.shortDescription || '',
     price: Number(apiProd.basePriceIdr) || 0,
-    category: (apiProd.category?.name || apiProd.category?.slug || 'Outerwear') as any,
-    collection: (apiProd.collection?.code || apiProd.collection?.name || 'FORM') as any,
+    category: (apiProd.categoryName || apiProd.category?.name || apiProd.category?.slug || 'Outerwear') as any,
+    collection: (apiProd.collectionName || apiProd.collection?.code || apiProd.collection?.name || 'FORM') as any,
     images,
     colors,
     sizes,

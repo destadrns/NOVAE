@@ -101,7 +101,7 @@ export class CatalogService {
    * Query and filter paginated products
    */
   async getProducts(query: GetProductsQueryDto): Promise<PaginatedProductsDto> {
-    const language = query.language || LanguageCode.id;
+    const language = query.lang || query.language || LanguageCode.id;
     const page = Math.max(1, query.page || 1);
     const limit = Math.min(50, Math.max(1, query.limit || 12));
     const skip = (page - 1) * limit;

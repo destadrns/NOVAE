@@ -11,4 +11,12 @@ export class LanguageQueryDto {
   @IsOptional()
   @IsEnum(LanguageCode)
   language?: LanguageCode = LanguageCode.id;
+
+  @ApiPropertyOptional({
+    enum: LanguageCode,
+    description: 'Alias for language query param (lang=id | lang=en)',
+  })
+  @IsOptional()
+  @IsEnum(LanguageCode)
+  lang?: LanguageCode;
 }

@@ -15,8 +15,11 @@ export const NewDrop: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     apiGetProducts({ lang: language }).then(({ data }) => {
-      if (isMounted && data && Array.isArray(data.items) && data.items.length > 0) {
-        setLiveProducts(data.items.map(mapApiProductToFrontend));
+      const rawList = Array.isArray((data as any)?.data)
+        ? (data as any).data
+        : (Array.isArray((data as any)?.items) ? (data as any).items : (Array.isArray(data) ? data : null));
+      if (isMounted && rawList && rawList.length > 0) {
+        setLiveProducts(rawList.map(mapApiProductToFrontend));
       }
     });
     return () => {

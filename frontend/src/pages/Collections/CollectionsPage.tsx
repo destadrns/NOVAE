@@ -53,8 +53,12 @@ export const CollectionsPage: React.FC = () => {
           setLiveCollections(mappedCols);
         }
 
-        if (prodRes.data && Array.isArray(prodRes.data.items) && prodRes.data.items.length > 0) {
-          setLiveProducts(prodRes.data.items.map(mapApiProductToFrontend));
+        const rawProdList = Array.isArray((prodRes.data as any)?.data)
+          ? (prodRes.data as any).data
+          : (Array.isArray((prodRes.data as any)?.items) ? (prodRes.data as any).items : (Array.isArray(prodRes.data) ? prodRes.data : null));
+
+        if (rawProdList && rawProdList.length > 0) {
+          setLiveProducts(rawProdList.map(mapApiProductToFrontend));
         }
       }
     }

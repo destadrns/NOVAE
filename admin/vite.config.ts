@@ -13,6 +13,12 @@ export default defineConfig({
   server: {
     port: 3002,
     strictPort: true,
+    proxy: {
+      '/api/v1': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     rollupOptions: {

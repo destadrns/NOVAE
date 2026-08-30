@@ -38,7 +38,7 @@ export class CatalogController {
     type: [CollectionDto],
   })
   async getCollections(@Query() query: LanguageQueryDto): Promise<CollectionDto[]> {
-    return this.catalogService.getCollections(query.language);
+    return this.catalogService.getCollections(query.lang || query.language);
   }
 
   @Get('collections/:slug')
@@ -64,7 +64,7 @@ export class CatalogController {
     @Param('slug') slug: string,
     @Query() query: LanguageQueryDto,
   ): Promise<CollectionDto> {
-    return this.catalogService.getCollectionBySlug(slug, query.language);
+    return this.catalogService.getCollectionBySlug(slug, query.lang || query.language);
   }
 
   @Get('products')
@@ -106,6 +106,6 @@ export class CatalogController {
     @Param('slug') slug: string,
     @Query() query: LanguageQueryDto,
   ): Promise<ProductDetailDto> {
-    return this.catalogService.getProductBySlug(slug, query.language);
+    return this.catalogService.getProductBySlug(slug, query.lang || query.language);
   }
 }

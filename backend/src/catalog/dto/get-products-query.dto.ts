@@ -21,6 +21,14 @@ export class GetProductsQueryDto {
   language?: LanguageCode = LanguageCode.id;
 
   @ApiPropertyOptional({
+    enum: LanguageCode,
+    description: 'Alias for language parameter',
+  })
+  @IsOptional()
+  @IsEnum(LanguageCode)
+  lang?: LanguageCode;
+
+  @ApiPropertyOptional({
     example: 'outerwear',
     description: 'Filter by category slug',
   })
