@@ -457,28 +457,88 @@ export class AdminCatalogService {
   }
 
   /**
-   * Archive product (soft-delete / status=archived)
+   * Delete or archive a product with full cascade support
    */
-  async archiveProduct(id: string) {
+  async deleteProduct(id: string) {
     const product = await this.prisma.product.findUnique({
       where: { id },
+      include: {
+        variants: {
+          include: {
+            orderItems: true,
+          },
+        },
+      },
     });
 
     if (!product) {
       throw new NotFoundException(`Product with ID '${id}' not found`);
     }
 
-    const updated = await this.prisma.product.update({
-      where: { id },
-      data: { status: ProductStatus.archived },
+    const hasOrders = product.variants.some((v) => v.orderItems.length > 0);
+
+    if (hasOrders) {
+      // If product has real paid orders, archive it for accounting & history integrity
+      const updated = await this.prisma.product.update({
+        where: { id },
+        data: { status: ProductStatus.archived },
+      });
+      this.logger.log(`Archived product (has orders): ${product.skuRoot} (${id})`);
+      return {
+        message: 'Produk diarsipkan karena memiliki riwayat transaksi pelanggan.',
+        id: updated.id,
+        status: 'archived',
+      };
+    }
+
+    // Otherwise permanently delete product and all associated child entities
+    await this.prisma.$transaction(async (tx) => {
+      const variantIds = product.variants.map((v) => v.id);
+      if (variantIds.length > 0) {
+        await tx.cartItem.deleteMany({
+          where: { variantId: { in: variantIds } },
+        });
+        await tx.inventoryMovement.deleteMany({
+          where: { variantId: { in: variantIds } },
+        });
+        await tx.inventory.deleteMany({
+          where: { variantId: { in: variantIds } },
+        });
+      }
+
+      await tx.wishlistItem.deleteMany({
+        where: { productId: id },
+      });
+      await tx.productTagMap.deleteMany({
+        where: { productId: id },
+      });
+      await tx.productImage.deleteMany({
+        where: { productId: id },
+      });
+      await tx.productTranslation.deleteMany({
+        where: { productId: id },
+      });
+      await tx.productVariant.deleteMany({
+        where: { productId: id },
+      });
+      await tx.product.delete({
+        where: { id },
+      });
     });
 
-    this.logger.log(`Archived product: ${product.skuRoot} (${id})`);
+    this.logger.log(`Permanently deleted product: ${product.skuRoot} (${id})`);
     return {
-      message: 'Product archived successfully',
-      id: updated.id,
-      status: updated.status,
+      message: 'Produk berhasil dihapus secara permanen dari katalog.',
+      id,
+      status: 'deleted',
     };
+  }
+
+  /**
+   * Archive product alias
+   */
+  async archiveProduct(id: string) {
+    return this.deleteProduct(id);
   }
 
   /**

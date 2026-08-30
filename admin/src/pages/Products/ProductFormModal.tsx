@@ -12,6 +12,7 @@ import {
   BackendProductImage,
 } from '@/lib/api';
 import { Modal } from '@/components/ui/Modal';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
@@ -291,26 +292,32 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     setVarPriceOverride('');
   };
 
-  const handleDeleteVariant = async (index: number, variantId?: string) => {
-    if (isEdit && variantId) {
-      if (!window.confirm('Yakin ingin menghapus varian ini?')) return;
+  const [deleteVariantTarget, setDeleteVariantTarget] = useState<{ index: number; id?: string; sku?: string } | null>(null);
+
+  const confirmDeleteVariant = async () => {
+    if (!deleteVariantTarget) return;
+    const { index, id } = deleteVariantTarget;
+
+    if (isEdit && id) {
       setIsSubmitting(true);
-      const { error } = await adminDeleteVariant(token, variantId);
+      const { error } = await adminDeleteVariant(token, id);
       setIsSubmitting(false);
 
       if (error) {
         setErrorMsg(Array.isArray(error.message) ? error.message.join(', ') : error.message);
+        setDeleteVariantTarget(null);
         return;
       }
 
       addToast({
         type: 'info',
         title: 'Varian Dihapus',
-        message: 'Varian telah dinonaktifkan/dihapus.',
+        message: 'Varian SKU telah dihapus dari inventaris.',
       });
     }
 
     setVariants(variants.filter((_, idx) => idx !== index));
+    setDeleteVariantTarget(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -934,7 +941,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         <td className="p-2 text-right">
                           <button
                             type="button"
-                            onClick={() => handleDeleteVariant(idx, v.id)}
+                            onClick={() => setDeleteVariantTarget({ index: idx, id: v.id, sku: v.sku })}
                             className="p-1 text-muted hover:text-rose-400"
                             title="Hapus Varian"
                           >
@@ -965,6 +972,22 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           </div>
         </div>
       </form>
+
+      {/* Delete Variant Confirmation Modal */}
+      {deleteVariantTarget && (
+        <ConfirmModal
+          isOpen={Boolean(deleteVariantTarget)}
+          onClose={() => setDeleteVariantTarget(null)}
+          onConfirm={confirmDeleteVariant}
+          title="Hapus Varian SKU"
+          itemName={deleteVariantTarget.sku || `Varian #${deleteVariantTarget.index + 1}`}
+          description="Apakah Anda yakin ingin menghapus varian ukuran ini dari produk? Perubahan akan langsung disinkronkan."
+          confirmLabel="Hapus Varian"
+          cancelLabel="Batal"
+          variant="danger"
+          isLoading={isSubmitting}
+        />
+      )}
     </Modal>
   );
 };

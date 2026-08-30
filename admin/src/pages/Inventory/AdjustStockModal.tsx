@@ -4,6 +4,7 @@ import { useAdminUIStore } from '@/store/useAdminUIStore';
 import { useAdminTranslation } from '@/i18n/useAdminTranslation';
 import { adminAdjustInventory, BackendInventoryItem } from '@/lib/api';
 import { Modal } from '@/components/ui/Modal';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
@@ -35,6 +36,7 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showLargeDecreaseConfirm, setShowLargeDecreaseConfirm] = useState(false);
 
   if (!item) return null;
 
@@ -49,40 +51,9 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
   const isCriticalReduction =
     direction === 'decrease' && resultingAvailable <= item.lowStockThreshold;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg('');
-
-    if (calculatedDelta === 0) {
-      setErrorMsg('Jumlah penyesuaian (delta) tidak boleh bernilai 0.');
-      return;
-    }
-
-    if (resultingOnHand < 0) {
-      setErrorMsg(
-        `Penyesuaian ditolak: stok fisik tidak boleh bernilai negatif (Hasil: ${resultingOnHand}).`,
-      );
-      return;
-    }
-
-    if (resultingAvailable < 0) {
-      setErrorMsg(
-        `Penyesuaian ditolak: stok tersedia tidak boleh kurang dari jumlah yang dipesan (${currentReserved} unit dipesan).`,
-      );
-      return;
-    }
-
-    if (direction === 'decrease' && Math.abs(calculatedDelta) >= 10) {
-      if (
-        !window.confirm(
-          `Konfirmasi pengurangan stok dalam jumlah besar (${calculatedDelta} unit) untuk SKU ${item.sku}?`,
-        )
-      ) {
-        return;
-      }
-    }
-
+  const executeAdjustment = async () => {
     setIsSubmitting(true);
+    setShowLargeDecreaseConfirm(false);
     const { data, error } = await adminAdjustInventory(token, item.variantId, {
       quantityDelta: calculatedDelta,
       movementType,
@@ -110,6 +81,37 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
       onSuccess();
       onClose();
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+
+    if (calculatedDelta === 0) {
+      setErrorMsg('Jumlah penyesuaian (delta) tidak boleh bernilai 0.');
+      return;
+    }
+
+    if (resultingOnHand < 0) {
+      setErrorMsg(
+        `Penyesuaian ditolak: stok fisik tidak boleh bernilai negatif (Hasil: ${resultingOnHand}).`,
+      );
+      return;
+    }
+
+    if (resultingAvailable < 0) {
+      setErrorMsg(
+        `Penyesuaian ditolak: stok tersedia tidak boleh kurang dari jumlah yang dipesan (${currentReserved} unit dipesan).`,
+      );
+      return;
+    }
+
+    if (direction === 'decrease' && Math.abs(calculatedDelta) >= 10) {
+      setShowLargeDecreaseConfirm(true);
+      return;
+    }
+
+    await executeAdjustment();
   };
 
   return (
@@ -284,6 +286,22 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
           </Button>
         </div>
       </form>
+
+      {/* Large Stock Reduction Confirmation Modal */}
+      {showLargeDecreaseConfirm && (
+        <ConfirmModal
+          isOpen={showLargeDecreaseConfirm}
+          onClose={() => setShowLargeDecreaseConfirm(false)}
+          onConfirm={executeAdjustment}
+          title="Konfirmasi Pengurangan Stok Besar"
+          itemName={`SKU: ${item.sku}`}
+          description={`Anda akan mengurangi stok sebanyak ${Math.abs(calculatedDelta)} unit. Apakah Anda yakin ingin menerapkan perubahan inventaris ini?`}
+          confirmLabel="Terapkan Pengurangan"
+          cancelLabel="Batal"
+          variant="warning"
+          isLoading={isSubmitting}
+        />
+      )}
     </Modal>
   );
 };

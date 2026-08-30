@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Table, TableHead, TableBody, TableRow, TableHeaderCell, TableCell } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { useAdminTranslation } from '@/i18n/useAdminTranslation';
 import { useAdminAuthStore } from '@/store/useAdminAuthStore';
 import {
@@ -131,9 +132,15 @@ export const JournalListPage: React.FC = () => {
     fetchArticles();
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this article?')) return;
-    await adminDeleteArticle(token, id);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const confirmDeleteArticle = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    await adminDeleteArticle(token, deleteTarget.id);
+    setIsDeleting(false);
+    setDeleteTarget(null);
     fetchArticles();
   };
 
@@ -291,7 +298,10 @@ export const JournalListPage: React.FC = () => {
                     <button
                       className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-sm transition-colors"
                       title="Delete"
-                      onClick={() => handleDelete(art.id)}
+                      onClick={() => setDeleteTarget({
+                        id: art.id,
+                        title: art.translations.find((t) => t.language === 'id')?.title || art.translations[0]?.title || art.slug,
+                      })}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -442,6 +452,22 @@ export const JournalListPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Delete Article Confirmation Modal */}
+      {deleteTarget && (
+        <ConfirmModal
+          isOpen={Boolean(deleteTarget)}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={confirmDeleteArticle}
+          title="Hapus Artikel Jurnal"
+          itemName={deleteTarget.title}
+          description="Apakah Anda yakin ingin menghapus artikel jurnal ini? Tindakan ini tidak dapat dibatalkan."
+          confirmLabel="Hapus Artikel"
+          cancelLabel="Batal"
+          variant="danger"
+          isLoading={isDeleting}
+        />
       )}
     </div>
   );

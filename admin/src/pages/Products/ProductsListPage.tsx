@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/Button';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ProductFormModal } from './ProductFormModal';
 import { Plus, Eye, Edit3, Trash2, Package, RefreshCw, AlertCircle } from 'lucide-react';
@@ -32,7 +33,7 @@ import { Plus, Eye, Edit3, Trash2, Package, RefreshCw, AlertCircle } from 'lucid
 export const ProductsListPage: React.FC = () => {
   const { token } = useAdminAuthStore();
   const { addToast } = useAdminUIStore();
-  const { t, format } = useAdminTranslation();
+  const { t } = useAdminTranslation();
 
   const [products, setProducts] = useState<BackendAdminProduct[]>([]);
   const [categories, setCategories] = useState<BackendCategory[]>([]);
@@ -50,6 +51,8 @@ export const ProductsListPage: React.FC = () => {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<BackendAdminProduct | null>(null);
   const [inspectProduct, setInspectProduct] = useState<BackendAdminProduct | null>(null);
+  const [deleteModalProduct, setDeleteModalProduct] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch Categories & Collections
   useEffect(() => {
@@ -96,26 +99,30 @@ export const ProductsListPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [loadProducts]);
 
-  // Handle Archive / Delete
-  const handleArchive = async (id: string, name: string) => {
-    if (window.confirm(`Arsipkan produk "${name}" dari katalog publik?`)) {
-      const { error } = await adminArchiveProduct(token, id);
-      if (error) {
-        addToast({
-          type: 'error',
-          title: 'Gagal Mengarsipkan',
-          message: Array.isArray(error.message) ? error.message.join(', ') : error.message,
-        });
-        return;
-      }
+  // Handle Product Deletion via Luxury UI Modal
+  const confirmDelete = async () => {
+    if (!deleteModalProduct) return;
+    setIsDeleting(true);
+    const { data, error } = await adminArchiveProduct(token, deleteModalProduct.id);
+    setIsDeleting(false);
 
+    if (error) {
       addToast({
-        type: 'info',
-        title: t.feedback.productDeleted,
-        message: format(t.feedback.productDeletedDesc, { name }),
+        type: 'error',
+        title: 'Gagal Menghapus Produk',
+        message: Array.isArray(error.message) ? error.message.join(', ') : error.message,
       });
-      loadProducts();
+      return;
     }
+
+    addToast({
+      type: 'success',
+      title: data?.status === 'deleted' ? 'Produk Dihapus Permanen' : 'Produk Diarsipkan',
+      message: data?.message || `Produk "${deleteModalProduct.name}" berhasil diproses.`,
+    });
+
+    setDeleteModalProduct(null);
+    loadProducts();
   };
 
   const openCreateModal = () => {
@@ -321,7 +328,7 @@ export const ProductsListPage: React.FC = () => {
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => handleArchive(prod.id, prod.name)}
+                        onClick={() => setDeleteModalProduct({ id: prod.id, name: prod.name })}
                         className="p-1.5 text-muted hover:text-rose-400 hover:bg-rose-500/10 rounded-sm transition-colors"
                         title={t.products.deleteTitle}
                         aria-label={t.products.deleteTitle}
@@ -346,6 +353,22 @@ export const ProductsListPage: React.FC = () => {
           categories={categories}
           collections={collections}
           onSuccess={loadProducts}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalProduct && (
+        <ConfirmModal
+          isOpen={Boolean(deleteModalProduct)}
+          onClose={() => setDeleteModalProduct(null)}
+          onConfirm={confirmDelete}
+          title="Hapus Produk dari Katalog"
+          itemName={deleteModalProduct.name}
+          description="Apakah Anda yakin ingin menghapus item ini? Produk yang belum memiliki transaksi penjualan akan dihapus secara permanen dari database, sedangkan produk yang memiliki riwayat transaksi akan diarsipkan secara aman."
+          confirmLabel="Ya, Hapus Produk"
+          cancelLabel="Batal"
+          variant="danger"
+          isLoading={isDeleting}
         />
       )}
 
