@@ -497,3 +497,80 @@ export async function adminUpdateOrderStatus(
   });
 }
 
+// ================================================================
+// JOURNAL CMS (Admin)
+// ================================================================
+
+export interface AdminArticleTranslation {
+  language: string;
+  title: string;
+  excerpt?: string | null;
+  content: string;
+}
+
+export interface AdminArticle {
+  id: string;
+  slug: string;
+  category: string;
+  coverImageUrl?: string | null;
+  author: string;
+  authorUserId?: string | null;
+  readingTimeMinutes: number;
+  status: string;
+  featured: boolean;
+  title: string;
+  excerpt?: string | null;
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  translations: AdminArticleTranslation[];
+}
+
+export interface PaginatedAdminArticles {
+  data: AdminArticle[];
+  meta: { page: number; limit: number; totalItems: number; totalPages: number };
+}
+
+export async function adminGetArticles(token: string | null, status = 'ALL', search = '') {
+  const params = new URLSearchParams({ status, limit: '50' });
+  if (search) params.set('search', search);
+  return fetchWithAuth<PaginatedAdminArticles>(`/admin/articles?${params}`, token);
+}
+
+export async function adminGetArticleById(token: string | null, id: string) {
+  return fetchWithAuth<AdminArticle>(`/admin/articles/${id}`, token);
+}
+
+export async function adminCreateArticle(token: string | null, payload: {
+  slug: string;
+  category: string;
+  coverImageUrl?: string;
+  readingTimeMinutes?: number;
+  status?: string;
+  featured?: boolean;
+  translations: AdminArticleTranslation[];
+}) {
+  return fetchWithAuth<AdminArticle>('/admin/articles', token, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminUpdateArticle(token: string | null, id: string, payload: Record<string, unknown>) {
+  return fetchWithAuth<AdminArticle>(`/admin/articles/${id}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminPublishArticle(token: string | null, id: string) {
+  return fetchWithAuth<AdminArticle>(`/admin/articles/${id}/publish`, token, { method: 'POST' });
+}
+
+export async function adminArchiveArticle(token: string | null, id: string) {
+  return fetchWithAuth<AdminArticle>(`/admin/articles/${id}/archive`, token, { method: 'POST' });
+}
+
+export async function adminDeleteArticle(token: string | null, id: string) {
+  return fetchWithAuth<{ success: boolean; message: string }>(`/admin/articles/${id}`, token, { method: 'DELETE' });
+}

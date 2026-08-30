@@ -347,4 +347,60 @@ export async function apiSimulatePayment(
   });
 }
 
+// ================================================================
+// JOURNAL ARTICLES (Public)
+// ================================================================
 
+export interface FrontendArticle {
+  id: string;
+  slug: string;
+  category: string;
+  coverImageUrl?: string | null;
+  author: string;
+  readingTimeMinutes: number;
+  status: string;
+  featured: boolean;
+  title: string;
+  excerpt?: string | null;
+  content?: string;
+  publishedAt?: string | null;
+  createdAt: string;
+}
+
+export interface PaginatedArticles {
+  data: FrontendArticle[];
+  meta: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+  };
+}
+
+export async function apiGetArticles(lang: string = 'id') {
+  const url = `${API_BASE_URL}/articles?lang=${lang}&limit=50`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      return { data: null, error: { statusCode: res.status, message: 'Failed to fetch articles' } };
+    }
+    const body: PaginatedArticles = await res.json();
+    return { data: body, error: null };
+  } catch {
+    return { data: null, error: { statusCode: 0, message: 'Network error' } };
+  }
+}
+
+export async function apiGetArticleBySlug(slug: string, lang: string = 'id') {
+  const url = `${API_BASE_URL}/articles/${slug}?lang=${lang}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      return { data: null, error: { statusCode: res.status, message: 'Article not found' } };
+    }
+    const body: FrontendArticle = await res.json();
+    return { data: body, error: null };
+  } catch {
+    return { data: null, error: { statusCode: 0, message: 'Network error' } };
+  }
+}

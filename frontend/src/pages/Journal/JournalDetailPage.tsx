@@ -1,14 +1,68 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
-import { ARTICLES } from '@/data/articles';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useLanguageStore } from '@/store/useLanguageStore';
+import { apiGetArticleBySlug, FrontendArticle } from '@/lib/api';
 
 export const JournalDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
-  const rawArticle = ARTICLES.find((a) => a.slug === slug) || ARTICLES[0];
-  const { t, getLocalizedArticle } = useTranslation();
-  const article = getLocalizedArticle(rawArticle);
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
+  const [article, setArticle] = useState<FrontendArticle | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!slug) return;
+    setIsLoading(true);
+    apiGetArticleBySlug(slug, language).then(({ data, error: err }) => {
+      if (data) {
+        setArticle(data);
+        setError(null);
+      } else {
+        setError(err?.message || 'Article not found');
+      }
+      setIsLoading(false);
+    });
+  }, [slug, language]);
+
+  if (isLoading) {
+    return (
+      <div className="pt-28 pb-32 bg-obsidian text-bone min-h-screen flex items-center justify-center">
+        <Loader2 className="w-6 h-6 text-accent-lime animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !article) {
+    return (
+      <div className="pt-28 pb-32 bg-obsidian text-bone min-h-screen">
+        <div className="max-w-4xl mx-auto px-6 sm:px-8">
+          <Link
+            to="/journal"
+            className="inline-flex items-center gap-2 text-xs uppercase font-mono tracking-widest text-muted hover:text-bone transition-colors mb-10"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>{t.journalDetailPage.backLink}</span>
+          </Link>
+          <div className="p-8 border border-dashed border-white/10 rounded-sm text-center bg-obsidian/40">
+            <p className="text-xs font-mono text-muted-light">
+              {error || (language === 'id' ? 'Artikel tidak ditemukan.' : 'Article not found.')}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const publishedDate = article.publishedAt
+    ? new Date(article.publishedAt).toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : '';
 
   return (
     <article className="pt-28 pb-32 bg-obsidian text-bone min-h-screen">
@@ -33,53 +87,38 @@ export const JournalDetailPage: React.FC = () => {
             {article.title}
           </h1>
           <div className="flex items-center justify-center gap-4 text-xs font-mono tracking-widest text-muted uppercase">
-            <span>{t.journalDetailPage.byAuthor.replace('{author}', article.author)}</span>
+            <span>{article.author}</span>
             <span>•</span>
-            <span>{article.date}</span>
+            <span>{publishedDate}</span>
             <span>•</span>
-            <span>{article.readTime}</span>
+            <span>{article.readingTimeMinutes} MIN READ</span>
           </div>
         </div>
 
         {/* Hero Cover */}
-        <div className="aspect-[16/9] bg-charcoal overflow-hidden border border-white/10 mb-14">
-          <img
-            src={article.coverImage}
-            alt={article.title}
-            className="w-full h-full object-cover"
-          />
-        </div>
+        {article.coverImageUrl && (
+          <div className="aspect-[16/9] bg-charcoal overflow-hidden border border-white/10 mb-14">
+            <img
+              src={article.coverImageUrl}
+              alt={article.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
 
         {/* Body content */}
         <div className="space-y-8 text-sm sm:text-base text-bone-soft/90 font-light leading-relaxed max-w-2xl mx-auto">
-          <p className="font-serif italic text-xl text-bone leading-relaxed">
-            &quot;{article.excerpt}&quot;
-          </p>
-
-          <p>
-            {t.journalDetailPage.p1}
-          </p>
-
-          <h2 className="text-2xl font-display font-bold uppercase text-bone pt-6">
-            {t.journalDetailPage.h2}
-          </h2>
-
-          <p>
-            {t.journalDetailPage.p2}
-          </p>
-
-          <div className="p-8 bg-charcoal border-l-2 border-accent-lime my-8 space-y-2">
-            <p className="text-xs font-mono tracking-widest text-accent-lime uppercase">
-              {t.journalDetailPage.keyPrinciple}
+          {article.excerpt && (
+            <p className="font-serif italic text-xl text-bone leading-relaxed">
+              &quot;{article.excerpt}&quot;
             </p>
-            <p className="font-serif italic text-lg text-bone">
-              {t.journalDetailPage.keyPrincipleQuote}
-            </p>
-          </div>
+          )}
 
-          <p>
-            {t.journalDetailPage.p3}
-          </p>
+          {article.content && (
+            <div className="whitespace-pre-line">
+              {article.content}
+            </div>
+          )}
         </div>
       </div>
     </article>

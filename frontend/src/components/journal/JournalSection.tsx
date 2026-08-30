@@ -1,14 +1,26 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowUpRight, BookOpen, Clock, Sparkles, User } from 'lucide-react';
-import { ARTICLES } from '@/data/articles';
+import { ArrowUpRight, BookOpen, Clock, Sparkles, User, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useLanguageStore } from '@/store/useLanguageStore';
+import { apiGetArticles, FrontendArticle } from '@/lib/api';
 
 export const JournalSection: React.FC = () => {
-  const { t, getLocalizedArticle } = useTranslation();
-  const leadArticle = getLocalizedArticle(ARTICLES[0]);
-  const sideArticles = ARTICLES.slice(1, 3).map(getLocalizedArticle);
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
+  const [articles, setArticles] = useState<FrontendArticle[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    apiGetArticles(language).then(({ data }) => {
+      if (data) setArticles(data.data);
+      setIsLoading(false);
+    });
+  }, [language]);
+
+  const leadArticle = articles[0];
+  const sideArticles = articles.slice(1, 3);
 
   return (
     <section
@@ -48,7 +60,15 @@ export const JournalSection: React.FC = () => {
           </Link>
         </div>
 
+        {/* Loading */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-6 h-6 text-accent-lime animate-spin" />
+          </div>
+        )}
+
         {/* Editorial Asymmetric Articles Grid */}
+        {!isLoading && leadArticle && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
           
           {/* Lead Hero Essay (7 Columns) */}
@@ -63,7 +83,7 @@ export const JournalSection: React.FC = () => {
             <div className="relative aspect-[16/10] sm:aspect-[16/9] overflow-hidden bg-obsidian border border-white/10 shadow-2xl">
               <Link to={`/journal/${leadArticle.slug}`} className="block w-full h-full">
                 <img
-                  src={leadArticle.coverImage}
+                  src={leadArticle.coverImageUrl || ''}
                   alt={leadArticle.title}
                   className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
                 />
@@ -80,7 +100,7 @@ export const JournalSection: React.FC = () => {
               {/* Read Time Tag */}
               <div className="absolute bottom-4 right-4 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1 border border-white/10 text-[9px] font-mono tracking-widest uppercase text-muted">
                 <Clock className="w-3 h-3 text-accent-lime" />
-                <span>{leadArticle.readTime}</span>
+                <span>{leadArticle.readingTimeMinutes} MIN READ</span>
               </div>
             </div>
 
@@ -89,7 +109,14 @@ export const JournalSection: React.FC = () => {
               <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] sm:text-xs font-mono tracking-widest uppercase text-muted">
                 <span className="text-accent-lime font-bold">{leadArticle.category}</span>
                 <span>•</span>
-                <span>{leadArticle.date}</span>
+                <span>
+                  {leadArticle.publishedAt
+                    ? new Date(leadArticle.publishedAt).toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', {
+                        month: 'long',
+                        year: 'numeric',
+                      }).toUpperCase()
+                    : ''}
+                </span>
                 <span>•</span>
                 <span className="flex items-center gap-1">
                   <User className="w-3 h-3 shrink-0" />
@@ -135,7 +162,7 @@ export const JournalSection: React.FC = () => {
                 <div className="sm:w-1/2 lg:w-full aspect-[16/10] overflow-hidden bg-obsidian border border-white/10 relative shrink-0">
                   <Link to={`/journal/${article.slug}`} className="block w-full h-full">
                     <img
-                      src={article.coverImage}
+                      src={article.coverImageUrl || ''}
                       alt={article.title}
                       className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
                     />
@@ -146,7 +173,7 @@ export const JournalSection: React.FC = () => {
                   </div>
 
                   <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm px-2.5 py-1 text-[8px] font-mono text-muted uppercase tracking-widest">
-                    {article.readTime}
+                    {article.readingTimeMinutes} MIN READ
                   </div>
                 </div>
 
@@ -155,7 +182,14 @@ export const JournalSection: React.FC = () => {
                   <div className="flex items-center gap-2.5 text-[10px] font-mono tracking-widest text-muted uppercase">
                     <span className="text-accent-lime font-semibold">{article.category}</span>
                     <span>•</span>
-                    <span>{article.date}</span>
+                    <span>
+                      {article.publishedAt
+                        ? new Date(article.publishedAt).toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', {
+                            month: 'long',
+                            year: 'numeric',
+                          }).toUpperCase()
+                        : ''}
+                    </span>
                   </div>
 
                   <h4 className="text-lg sm:text-xl font-display font-bold tracking-tight uppercase text-bone group-hover:text-accent-lime transition-colors">
@@ -184,6 +218,7 @@ export const JournalSection: React.FC = () => {
           </div>
 
         </div>
+        )}
 
       </div>
     </section>
