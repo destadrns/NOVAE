@@ -26,6 +26,9 @@ interface AdminUIState {
   toasts: ToastItem[];
   addToast: (toast: Omit<ToastItem, 'id'>) => void;
   removeToast: (id: string) => void;
+
+  badgeRefreshTrigger: number;
+  triggerBadgeRefresh: () => void;
 }
 
 export const useAdminUIStore = create<AdminUIState>((set) => ({
@@ -42,6 +45,10 @@ export const useAdminUIStore = create<AdminUIState>((set) => ({
   openSearch: () => set({ isSearchOpen: true }),
   closeSearch: () => set({ isSearchOpen: false }),
   toggleSearch: () => set((state) => ({ isSearchOpen: !state.isSearchOpen })),
+
+  badgeRefreshTrigger: 0,
+  triggerBadgeRefresh: () =>
+    set((state) => ({ badgeRefreshTrigger: state.badgeRefreshTrigger + 1 })),
 
   toasts: [],
   addToast: (toast) => {

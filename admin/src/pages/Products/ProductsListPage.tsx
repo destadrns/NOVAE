@@ -32,7 +32,7 @@ import { Plus, Eye, Edit3, Trash2, Package, RefreshCw, AlertCircle } from 'lucid
 
 export const ProductsListPage: React.FC = () => {
   const { token } = useAdminAuthStore();
-  const { addToast } = useAdminUIStore();
+  const { addToast, triggerBadgeRefresh } = useAdminUIStore();
   const { t } = useAdminTranslation();
 
   const [products, setProducts] = useState<BackendAdminProduct[]>([]);
@@ -121,6 +121,7 @@ export const ProductsListPage: React.FC = () => {
       message: data?.message || `Produk "${deleteModalProduct.name}" berhasil diproses.`,
     });
 
+    triggerBadgeRefresh();
     setDeleteModalProduct(null);
     loadProducts();
   };

@@ -40,7 +40,7 @@ import {
 
 export const OrdersListPage: React.FC = () => {
   const { token } = useAdminAuthStore();
-  const { addToast } = useAdminUIStore();
+  const { addToast, triggerBadgeRefresh } = useAdminUIStore();
   const { t, format } = useAdminTranslation();
 
   // Data state
@@ -143,6 +143,7 @@ export const OrdersListPage: React.FC = () => {
           status: translatedStatus,
         }),
       });
+      triggerBadgeRefresh();
       setInspectOrder(data);
       fetchOrders();
     }

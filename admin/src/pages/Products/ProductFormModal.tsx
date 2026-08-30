@@ -37,7 +37,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   onSuccess,
 }) => {
   const { token } = useAdminAuthStore();
-  const { addToast } = useAdminUIStore();
+  const { addToast, triggerBadgeRefresh } = useAdminUIStore();
 
   const isEdit = Boolean(product);
   const [activeTab, setActiveTab] = useState<'basic' | 'localization' | 'media' | 'variants'>('basic');
@@ -395,6 +395,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           title: 'Produk Diperbarui',
           message: `${nameId} berhasil diperbarui di katalog atelier.`,
         });
+        triggerBadgeRefresh();
         onSuccess();
         onClose();
       }
@@ -430,6 +431,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           title: 'Produk Dibuat',
           message: `${nameId} berhasil ditambahkan ke katalog atelier.`,
         });
+        triggerBadgeRefresh();
         onSuccess();
         onClose();
       }

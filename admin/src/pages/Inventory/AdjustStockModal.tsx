@@ -24,7 +24,7 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
   onSuccess,
 }) => {
   const { token } = useAdminAuthStore();
-  const { addToast } = useAdminUIStore();
+  const { addToast, triggerBadgeRefresh } = useAdminUIStore();
   const { t, format } = useAdminTranslation();
 
   const [movementType, setMovementType] = useState<string>('restock');
@@ -78,6 +78,7 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
           sku: item.sku,
         }),
       });
+      triggerBadgeRefresh();
       onSuccess();
       onClose();
     }

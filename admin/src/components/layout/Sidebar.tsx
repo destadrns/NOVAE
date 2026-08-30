@@ -26,8 +26,13 @@ import {
 import { clsx } from 'clsx';
 
 export const Sidebar: React.FC = () => {
-  const { isSidebarCollapsed, toggleSidebar, isMobileSidebarOpen, closeMobileSidebar } =
-    useAdminUIStore();
+  const {
+    isSidebarCollapsed,
+    toggleSidebar,
+    isMobileSidebarOpen,
+    closeMobileSidebar,
+    badgeRefreshTrigger,
+  } = useAdminUIStore();
   const { user, token, logout } = useAdminAuthStore();
   const { t } = useAdminTranslation();
   const location = useLocation();
@@ -67,9 +72,18 @@ export const Sidebar: React.FC = () => {
     }
   }, [token]);
 
+  // Immediate refresh on route change or explicit mutation trigger
   useEffect(() => {
     fetchBadgeCounts();
-  }, [fetchBadgeCounts, location.pathname]);
+  }, [fetchBadgeCounts, location.pathname, badgeRefreshTrigger]);
+
+  // Background polling every 10 seconds for real-time customer activity
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchBadgeCounts();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [fetchBadgeCounts]);
 
   const navItems = [
     {

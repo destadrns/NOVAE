@@ -36,7 +36,7 @@ import {
 
 export const InventoryMatrixPage: React.FC = () => {
   const { token } = useAdminAuthStore();
-  const { addToast } = useAdminUIStore();
+  const { addToast, triggerBadgeRefresh } = useAdminUIStore();
   const { t, format } = useAdminTranslation();
 
   const [items, setItems] = useState<BackendInventoryItem[]>([]);
@@ -117,6 +117,7 @@ export const InventoryMatrixPage: React.FC = () => {
           sku: item.sku,
         }),
       });
+      triggerBadgeRefresh();
       fetchInventory();
     }
   };
