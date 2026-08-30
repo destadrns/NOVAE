@@ -67,9 +67,17 @@ import { useWishlistStore } from './useWishlistStore';
 // Helper to synchronize commerce state on login
 const syncCommerceState = async (token: string) => {
   try {
-    await useCartStore.getState().mergeGuestCart(token);
+    const guestKey = useCartStore.getState().sessionKey;
+    if (guestKey) {
+      await useCartStore.getState().mergeGuestCart(token);
+    }
     await useCartStore.getState().fetchCart(token);
     await useWishlistStore.getState().fetchWishlist(token);
+
+    // Reset guest session key so subsequent guest sessions start completely fresh
+    const freshGuestKey = generateUUID();
+    localStorage.setItem('novae_guest_session_key', freshGuestKey);
+    useCartStore.setState({ sessionKey: freshGuestKey });
   } catch (err) {
     console.error('Failed to sync commerce state on auth change', err);
   }
@@ -79,7 +87,14 @@ const syncCommerceState = async (token: string) => {
 const resetCommerceState = async () => {
   try {
     useWishlistStore.setState({ items: [], wishlistIds: [] });
-    await useCartStore.getState().fetchCart(null);
+    const freshGuestKey = generateUUID();
+    localStorage.setItem('novae_guest_session_key', freshGuestKey);
+    useCartStore.setState({
+      items: [],
+      itemCount: 0,
+      subtotalIdr: 0,
+      sessionKey: freshGuestKey,
+    });
   } catch (err) {
     console.error('Failed to reset commerce state on signout', err);
   }

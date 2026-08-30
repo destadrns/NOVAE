@@ -9,6 +9,7 @@ import {
   getGuestSessionKey,
   FrontendCartItem,
 } from '@/lib/api';
+import { useAuthStore } from './useAuthStore';
 
 export type CartItem = FrontendCartItem;
 
@@ -45,6 +46,15 @@ interface CartState {
   getSubtotal: () => number;
 }
 
+const getAuthToken = (explicitToken?: string | null): string | null => {
+  if (explicitToken !== undefined) return explicitToken;
+  try {
+    return useAuthStore.getState().token;
+  } catch {
+    return null;
+  }
+};
+
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
   itemCount: 0,
@@ -55,8 +65,9 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   fetchCart: async (token, lang = 'id') => {
     set({ isLoading: true, error: null });
+    const authToken = getAuthToken(token);
     const sessionKey = get().sessionKey;
-    const { data, error } = await apiGetCart(token, sessionKey, lang);
+    const { data, error } = await apiGetCart(authToken, sessionKey, lang);
     set({ isLoading: false });
 
     if (error) {
@@ -78,12 +89,14 @@ export const useCartStore = create<CartState>((set, get) => ({
     token?: string | null,
     lang = 'id',
   ) => {
+    const authToken = getAuthToken(token);
+    const sessionKey = get().sessionKey;
+
     // Check if called with variantId string
     if (typeof itemOrVariantId === 'string') {
       const qty = typeof colorOrQuantity === 'number' ? colorOrQuantity : 1;
       set({ isLoading: true, error: null });
-      const sessionKey = get().sessionKey;
-      const { data, error } = await apiAddToCart(itemOrVariantId, qty, token, sessionKey, lang);
+      const { data, error } = await apiAddToCart(itemOrVariantId, qty, authToken, sessionKey, lang);
       set({ isLoading: false });
 
       if (error) {
@@ -102,9 +115,15 @@ export const useCartStore = create<CartState>((set, get) => ({
 
     // Called with Product object (e.g. from ProductCard or ProductDetailPage)
     const product = itemOrVariantId;
-    const chosenColor = typeof colorOrQuantity === 'string' ? colorOrQuantity : product.colors?.[0]?.name || 'Standard';
+    const chosenColor =
+      typeof colorOrQuantity === 'string' ? colorOrQuantity : product.colors?.[0]?.name || 'Standard';
     const chosenSize = size || product.sizes?.[0] || 'M';
-    const qty = typeof quantity === 'number' ? quantity : (typeof colorOrQuantity === 'number' ? colorOrQuantity : 1);
+    const qty =
+      typeof quantity === 'number'
+        ? quantity
+        : typeof colorOrQuantity === 'number'
+        ? colorOrQuantity
+        : 1;
 
     // If product has backend variant UUID attached, use backend API
     const matchingVariant = product.variants?.find(
@@ -113,8 +132,7 @@ export const useCartStore = create<CartState>((set, get) => ({
 
     if (matchingVariant?.id) {
       set({ isLoading: true, error: null });
-      const sessionKey = get().sessionKey;
-      const { data, error } = await apiAddToCart(matchingVariant.id, qty, token, sessionKey, lang);
+      const { data, error } = await apiAddToCart(matchingVariant.id, qty, authToken, sessionKey, lang);
       set({ isLoading: false });
 
       if (!error && data) {
@@ -133,33 +151,35 @@ export const useCartStore = create<CartState>((set, get) => ({
     const imageUrl = product.images?.[0] || null;
 
     set((state) => {
-      const existingIdx = state.items.findIndex((item) => item.id === uniqueId);
+      const existingIndex = state.items.findIndex((item) => item.id === uniqueId);
       let updatedItems: CartItem[];
 
-      if (existingIdx > -1) {
-        updatedItems = [...state.items];
-        const newQty = updatedItems[existingIdx].quantity + qty;
-        updatedItems[existingIdx] = {
-          ...updatedItems[existingIdx],
-          quantity: newQty,
-          totalPriceIdr: updatedItems[existingIdx].unitPriceIdr * newQty,
-        };
+      if (existingIndex > -1) {
+        updatedItems = state.items.map((item, idx) =>
+          idx === existingIndex
+            ? {
+                ...item,
+                quantity: item.quantity + qty,
+                totalPriceIdr: (item.quantity + qty) * item.unitPriceIdr,
+              }
+            : item,
+        );
       } else {
         const newItem: CartItem = {
           id: uniqueId,
           variantId: uniqueId,
           productId: product.id,
-          productSlug: product.slug || 'product',
-          productName: product.name,
+          productSlug: product.slug,
+          productName: product.name || product.title,
           colorName: chosenColor,
           colorCode: product.colors?.find((c: any) => c.name === chosenColor)?.hex || null,
           size: chosenSize,
-          sku: `${product.id}-${chosenSize}`,
+          sku: `${product.slug}-${chosenColor}-${chosenSize}`.toUpperCase(),
           imageUrl,
           quantity: qty,
           unitPriceIdr: price,
           totalPriceIdr: price * qty,
-          availableQuantity: 10,
+          availableQuantity: 99,
           isAvailable: true,
           isLowStock: false,
           isOutOfStock: false,
@@ -181,16 +201,18 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   updateQuantity: async (itemId, quantity, token, lang = 'id') => {
+    const authToken = getAuthToken(token);
+    const sessionKey = get().sessionKey;
+
     if (quantity <= 0) {
-      await get().removeItem(itemId, token, lang);
+      await get().removeItem(itemId, authToken, lang);
       return;
     }
 
     set({ isLoading: true, error: null });
-    const sessionKey = get().sessionKey;
 
     // Try backend API first
-    const { data, error } = await apiUpdateCartItem(itemId, quantity, token, sessionKey, lang);
+    const { data, error } = await apiUpdateCartItem(itemId, quantity, authToken, sessionKey, lang);
     set({ isLoading: false });
 
     if (!error && data) {
@@ -216,9 +238,10 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   removeItem: async (itemId, token, lang = 'id') => {
     set({ isLoading: true, error: null });
+    const authToken = getAuthToken(token);
     const sessionKey = get().sessionKey;
 
-    const { data, error } = await apiRemoveCartItem(itemId, token, sessionKey, lang);
+    const { data, error } = await apiRemoveCartItem(itemId, authToken, sessionKey, lang);
     set({ isLoading: false });
 
     if (!error && data) {
@@ -240,9 +263,10 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   clearCart: async (token, lang = 'id') => {
     set({ isLoading: true, error: null });
+    const authToken = getAuthToken(token);
     const sessionKey = get().sessionKey;
 
-    const { data, error } = await apiClearCart(token, sessionKey, lang);
+    const { data, error } = await apiClearCart(authToken, sessionKey, lang);
     set({ isLoading: false });
 
     if (!error && data) {
