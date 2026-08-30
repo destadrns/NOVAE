@@ -6,7 +6,7 @@ import { useAdminTranslation } from '@/i18n/useAdminTranslation';
 import { useAdminAuthStore } from '@/store/useAdminAuthStore';
 import { adminGetCollections, BackendCollection } from '@/lib/api';
 import { CollectionFormModal } from './CollectionFormModal';
-import { Edit3, Plus, RefreshCw } from 'lucide-react';
+import { Edit3, RefreshCw } from 'lucide-react';
 
 const FALLBACK_COLLECTIONS: BackendCollection[] = [
   {
@@ -119,11 +119,6 @@ export const CollectionsListPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleCreate = () => {
-    setSelectedCollection(null);
-    setIsModalOpen(true);
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -133,7 +128,7 @@ export const CollectionsListPage: React.FC = () => {
             {t.collections.title}
           </h1>
           <p className="text-xs font-sans text-muted mt-1">
-            {t.collections.subtitle}
+            Kelola dan sesuaikan identitas editorial 3 pilar kapsul signature atelier: FORM, MOTION, dan IDENTITY.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -145,14 +140,6 @@ export const CollectionsListPage: React.FC = () => {
             leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />}
           >
             Refresh
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            leftIcon={<Plus className="w-3.5 h-3.5" />}
-            onClick={handleCreate}
-          >
-            {t.collections.createCapsuleBtn}
           </Button>
         </div>
       </div>

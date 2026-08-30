@@ -158,8 +158,8 @@ export const CollectionFormModal: React.FC<CollectionFormModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEdit ? `EDIT SERIES — ${collection?.code || ''}` : 'BUAT KAPSUL KOLEKSI BARU'}
-      subtitle="Kelola narasi editorial, metadata identitas, dan sampul visual series koleksi atelier."
+      title={`EDIT SERIES — ${collection?.code || ''}`}
+      subtitle="Kelola narasi editorial, identitas visual, dan konten dwibahasa pilar koleksi atelier."
       maxWidth="lg"
       footer={
         <div className="flex items-center justify-between w-full">
@@ -167,7 +167,7 @@ export const CollectionFormModal: React.FC<CollectionFormModalProps> = ({
             Batal
           </Button>
           <Button variant="primary" size="sm" onClick={handleSubmit} isLoading={isSubmitting}>
-            {isEdit ? 'Simpan Perubahan' : 'Terbitkan Koleksi'}
+            Simpan Perubahan
           </Button>
         </div>
       }
@@ -191,8 +191,9 @@ export const CollectionFormModal: React.FC<CollectionFormModalProps> = ({
           />
 
           <Input
-            label="Slug URL"
+            label="Slug URL (Path Navigasi)"
             required
+            disabled
             value={slug}
             onChange={(e) => setSlug(e.target.value.toLowerCase())}
             placeholder="form"
