@@ -145,10 +145,13 @@ export const useAuthStore = create<AuthState>((set) => ({
           syncCommerceState(token);
           return;
         }
-      } else {
-        const stored = localStorage.getItem('novae_customer_session');
-        if (stored) {
-          const parsed = JSON.parse(stored);
+      }
+
+      // Check persistent client session storage
+      const stored = localStorage.getItem('novae_customer_session');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.user && parsed?.token) {
           set({ user: parsed.user, token: parsed.token, isAuthenticated: true, isLoading: false });
           if (parsed.token) {
             syncCommerceState(parsed.token);

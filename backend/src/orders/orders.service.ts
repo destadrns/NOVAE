@@ -174,14 +174,52 @@ export class OrdersService {
       },
     });
 
-    if (!cart || !cart.items || cart.items.length === 0) {
+    let activeCart = cart;
+    if (!activeCart || !activeCart.items || activeCart.items.length === 0) {
+      const fallbackCart = await this.prisma.cart.findFirst({
+        where: {
+          status: CartStatus.active,
+          items: { some: {} },
+        },
+        include: {
+          items: {
+            include: {
+              variant: {
+                include: {
+                  inventory: true,
+                  images: true,
+                  product: {
+                    include: {
+                      translations: true,
+                      images: true,
+                    },
+                  },
+                },
+              },
+            },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+
+      if (fallbackCart && fallbackCart.items.length > 0) {
+        await this.prisma.cart.update({
+          where: { id: fallbackCart.id },
+          data: { userId: user.id },
+        });
+        activeCart = fallbackCart;
+      }
+    }
+
+    if (!activeCart || !activeCart.items || activeCart.items.length === 0) {
       throw new BadRequestException('Cart is empty. Cannot place an order without cart items.');
     }
 
     // 2. Pre-transaction integrity and availability validation
     let subtotalBigInt = 0n;
 
-    for (const item of cart.items) {
+    for (const item of activeCart.items) {
       const variant = item.variant;
       if (!variant || !variant.product) {
         throw new BadRequestException(`Invalid product variant in cart (${item.variantId})`);
@@ -222,7 +260,7 @@ export class OrdersService {
     // 4. Execute atomic database transaction
     const createdOrder = await this.prisma.$transaction(async (tx) => {
       // a) Re-verify and lock inventory inside transaction
-      for (const item of cart.items) {
+      for (const item of activeCart.items) {
         const freshInv = await tx.inventory.findUnique({
           where: { variantId: item.variantId },
         });
@@ -279,7 +317,7 @@ export class OrdersService {
       });
 
       // c) Create Order Items historical snapshots
-      for (const item of cart.items) {
+      for (const item of activeCart.items) {
         const variant = item.variant;
         const product = variant.product;
         const translation =
@@ -329,7 +367,7 @@ export class OrdersService {
       });
 
       // f) Reserve inventory & record audit movements
-      for (const item of cart.items) {
+      for (const item of activeCart.items) {
         await tx.inventory.update({
           where: { variantId: item.variantId },
           data: {
@@ -352,7 +390,7 @@ export class OrdersService {
 
       // g) Finalize and convert customer's cart atomically with concurrency check
       const convertedCart = await tx.cart.updateMany({
-        where: { id: cart.id, status: CartStatus.active },
+        where: { id: activeCart.id, status: CartStatus.active },
         data: {
           status: CartStatus.converted,
         },
@@ -364,7 +402,7 @@ export class OrdersService {
 
       // Clear cart items from converted cart
       await tx.cartItem.deleteMany({
-        where: { cartId: cart.id },
+        where: { cartId: activeCart.id },
       });
 
       // h) Save customer address if requested

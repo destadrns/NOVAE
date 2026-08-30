@@ -161,7 +161,8 @@ export const CheckoutPage: React.FC = () => {
   };
 
   const handleConfirmOrderReview = async () => {
-    if (!token) {
+    const currentToken = token || useAuthStore.getState().token;
+    if (!currentToken) {
       openAuthModal('signin');
       return;
     }
@@ -170,7 +171,7 @@ export const CheckoutPage: React.FC = () => {
     setOrderError(null);
 
     const { data, error } = await apiCreateOrder(
-      token,
+      currentToken,
       {
         shippingAddress: {
           fullName: address.fullName,
