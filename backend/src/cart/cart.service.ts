@@ -181,22 +181,39 @@ export class CartService {
   ): Promise<CartResponseDto> {
     const quantityToAdd = dto.quantity || 1;
 
-    // Validate variant and product existence & active status
-    let variant = await this.prisma.productVariant.findUnique({
-      where: { id: dto.variantId },
-      include: {
-        inventory: true,
-        product: true,
-      },
-    }).catch(() => null);
+    const isUUID = (val: string) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
 
-    if (!variant) {
+    // Validate variant and product existence & active status
+    let variant: any = null;
+
+    if (isUUID(dto.variantId)) {
+      variant = await this.prisma.productVariant.findUnique({
+        where: { id: dto.variantId },
+        include: {
+          inventory: true,
+          product: true,
+        },
+      });
+
+      if (!variant) {
+        variant = await this.prisma.productVariant.findFirst({
+          where: {
+            productId: dto.variantId,
+            status: VariantStatus.active,
+          },
+          include: {
+            inventory: true,
+            product: true,
+          },
+        });
+      }
+    } else {
       variant = await this.prisma.productVariant.findFirst({
         where: {
           OR: [
-            { sku: dto.variantId },
-            { product: { slug: dto.variantId } },
-            { product: { id: dto.variantId } },
+            { sku: { equals: dto.variantId, mode: 'insensitive' } },
+            { product: { slug: { equals: dto.variantId, mode: 'insensitive' } } },
           ],
           status: VariantStatus.active,
         },
@@ -218,7 +235,7 @@ export class CartService {
     }
 
     if (!variant) {
-      throw new NotFoundException(`Product variant with ID '${dto.variantId}' not found`);
+      throw new NotFoundException(`Product variant with identifier '${dto.variantId}' not found`);
     }
 
     if (variant.status !== VariantStatus.active || variant.product.status !== ProductStatus.active) {
