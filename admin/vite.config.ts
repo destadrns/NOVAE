@@ -14,4 +14,14 @@ export default defineConfig({
     port: 3002,
     strictPort: true,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom', 'zustand'],
+          'vendor-icons': ['lucide-react'],
+        },
+      },
+    },
+  },
 });

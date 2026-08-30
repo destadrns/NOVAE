@@ -96,6 +96,7 @@ describe('AnalyticsService', () => {
       findMany: jest.fn(),
       groupBy: jest.fn(),
       count: jest.fn(),
+      aggregate: jest.fn(),
     },
     orderItem: {
       groupBy: jest.fn(),
@@ -147,6 +148,13 @@ describe('AnalyticsService', () => {
       mockPrisma.order.findMany.mockImplementation((args) => {
         if (args?.take === 5) return Promise.resolve(mockOrders);
         return Promise.resolve(mockOrders);
+      });
+      mockPrisma.order.aggregate.mockResolvedValue({
+        _sum: { totalIdr: 2786000n },
+        _count: { id: 2 },
+      });
+      mockPrisma.inventory.aggregate.mockResolvedValue({
+        _sum: { quantityOnHand: 12 },
       });
       mockPrisma.inventory.findMany.mockResolvedValue(mockInventory);
       mockPrisma.user.count.mockResolvedValue(5);

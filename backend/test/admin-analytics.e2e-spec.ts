@@ -65,6 +65,10 @@ describe('NOVAÉ Admin Analytics (e2e)', () => {
           items: [{ productId: 'prod-1', quantity: 1, lineTotalIdr: 899000n }],
         },
       ]),
+      aggregate: jest.fn().mockResolvedValue({
+        _sum: { totalIdr: 1548000n },
+        _count: { id: 1 },
+      }),
       groupBy: jest.fn().mockResolvedValue([
         { status: 'delivered', _count: { id: 1 } },
       ]),

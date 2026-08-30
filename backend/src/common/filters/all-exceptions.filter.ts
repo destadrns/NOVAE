@@ -43,7 +43,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         error = obj.error || exception.name;
       }
     } else if (exception instanceof Error) {
-      message = exception.message;
+      message =
+        process.env.NODE_ENV === 'production'
+          ? 'Internal server error occurred'
+          : exception.message;
       error = exception.name;
     }
 

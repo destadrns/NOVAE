@@ -225,8 +225,8 @@ Journal CMS (Create, Edit, Publish, Preview & Archive Bilingual Articles)
 ### 1. Clone & Install Dependencies
 
 ```bash
-git clone https://github.com/your-username/novae.git
-cd novae
+git clone https://github.com/destadrns/NOVAE.git
+cd NOVAE
 
 # Install monorepo dependencies across frontend, admin, and backend
 npm install

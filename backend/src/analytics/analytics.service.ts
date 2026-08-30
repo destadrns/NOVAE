@@ -106,20 +106,38 @@ export class AnalyticsService {
           status: { not: OrderStatus.cancelled },
         };
 
-    const [currentOrders, prevOrders] = await Promise.all([
+    const [currentOrders, prevOrderAgg, totalStockAgg, inventoryItems] = await Promise.all([
       this.prisma.order.findMany({
         where: orderWhereCurrent,
         include: { items: true },
       }),
-      this.prisma.order.findMany({
+      this.prisma.order.aggregate({
         where: orderWherePrevious,
+        _sum: { totalIdr: true },
+        _count: { id: true },
+      }),
+      this.prisma.inventory.aggregate({
+        _sum: { quantityOnHand: true },
+      }),
+      this.prisma.inventory.findMany({
+        include: {
+          variant: {
+            include: {
+              product: {
+                include: {
+                  translations: true,
+                },
+              },
+            },
+          },
+        },
       }),
     ]);
 
     const currentGrossSales = currentOrders.reduce((sum, o) => sum + Number(o.totalIdr), 0);
-    const prevGrossSales = prevOrders.reduce((sum, o) => sum + Number(o.totalIdr), 0);
+    const prevGrossSales = Number(prevOrderAgg._sum.totalIdr || 0);
     const totalOrdersCount = currentOrders.length;
-    const prevOrdersCount = prevOrders.length;
+    const prevOrdersCount = prevOrderAgg._count.id || 0;
     const totalPiecesSold = currentOrders.reduce(
       (sum, o) => sum + o.items.reduce((itemSum, i) => itemSum + i.quantity, 0),
       0,
@@ -130,21 +148,7 @@ export class AnalyticsService {
     const averageOrderValue = totalOrdersCount > 0 ? Math.round(currentGrossSales / totalOrdersCount) : 0;
 
     // 2. INVENTORY HEALTH & STOCK AVAILABILITY
-    const inventoryItems = await this.prisma.inventory.findMany({
-      include: {
-        variant: {
-          include: {
-            product: {
-              include: {
-                translations: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    let totalPiecesInStock = 0;
+    const totalPiecesInStock = totalStockAgg._sum.quantityOnHand || 0;
     const lowStockAlerts: LowStockAlertDto[] = [];
 
     for (const item of inventoryItems) {
@@ -152,7 +156,6 @@ export class AnalyticsService {
       const reserved = item.reservedQuantity;
       const available = stock - reserved;
       const threshold = item.lowStockThreshold;
-      totalPiecesInStock += stock;
 
       const isLow = available <= threshold || stock <= threshold;
       const isOut = available <= 0;
@@ -343,8 +346,8 @@ export class AnalyticsService {
       include: {
         translations: true,
         products: {
-          include: {
-            variants: true,
+          select: {
+            id: true,
           },
         },
       },
