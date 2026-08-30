@@ -206,10 +206,12 @@ Journal CMS (Create, Edit, Publish, Preview & Archive Bilingual Articles)
 - **Automated Verification**: 105 unit tests (11 suites) and 95 end-to-end integration tests (10 suites) passing with zero errors.
 
 ### Upcoming Development
-- Printable order invoices & packing slip PDF generator.
-- Streaming CSV export for financial and inventory reports.
-- Rich-text markdown / WYSIWYG editor for Journal CMS.
-- Predictive machine-learning replenishment forecasting.
+- Printable order invoices and packing slips
+- CSV export for financial and inventory reports
+- Rich-text / Markdown editor for Journal CMS
+- Customer notification and email workflows
+- Additional reporting and operational insights
+- Further performance and accessibility improvements
 
 ---
 
