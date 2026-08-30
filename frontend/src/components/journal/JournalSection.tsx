@@ -83,8 +83,15 @@ export const JournalSection: React.FC = () => {
             <div className="relative aspect-[16/10] sm:aspect-[16/9] overflow-hidden bg-obsidian border border-white/10 shadow-2xl">
               <Link to={`/journal/${leadArticle.slug}`} className="block w-full h-full">
                 <img
-                  src={leadArticle.coverImageUrl || ''}
+                  src={
+                    leadArticle.coverImageUrl ||
+                    'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?q=80&w=1200&auto=format&fit=crop'
+                  }
                   alt={leadArticle.title}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src =
+                      'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?q=80&w=1200&auto=format&fit=crop';
+                  }}
                   className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
                 />
               </Link>
@@ -162,8 +169,17 @@ export const JournalSection: React.FC = () => {
                 <div className="sm:w-1/2 lg:w-full aspect-[16/10] overflow-hidden bg-obsidian border border-white/10 relative shrink-0">
                   <Link to={`/journal/${article.slug}`} className="block w-full h-full">
                     <img
-                      src={article.coverImageUrl || ''}
+                      src={
+                        article.coverImageUrl ||
+                        (idx % 2 === 0
+                          ? 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1200&auto=format&fit=crop'
+                          : 'https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=1200&auto=format&fit=crop')
+                      }
                       alt={article.title}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src =
+                          'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1200&auto=format&fit=crop';
+                      }}
                       className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
                     />
                   </Link>

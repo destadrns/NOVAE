@@ -71,7 +71,7 @@ export const CampaignStory: React.FC = () => {
 
         <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-6">
           <Link
-            to="/journal/inside-novae-form-01"
+            to="/journal/anatomy-of-form"
             className="group inline-flex items-center gap-3 bg-bone hover:bg-accent-lime text-obsidian px-8 py-4 text-xs font-bold uppercase tracking-[0.25em] transition-all duration-300"
           >
             <span>{t.campaign.readStory}</span>

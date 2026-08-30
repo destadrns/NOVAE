@@ -97,10 +97,14 @@ export const JournalDetailPage: React.FC = () => {
 
         {/* Hero Cover */}
         {article.coverImageUrl && (
-          <div className="aspect-[16/9] bg-charcoal overflow-hidden border border-white/10 mb-14">
+          <div className="aspect-[16/9] bg-charcoal overflow-hidden border border-white/10 mb-14 relative">
             <img
               src={article.coverImageUrl}
               alt={article.title}
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src =
+                  'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?q=80&w=1200&auto=format&fit=crop';
+              }}
               className="w-full h-full object-cover"
             />
           </div>

@@ -72,11 +72,18 @@ export const JournalPage: React.FC = () => {
         {/* Featured First Article */}
         {!isLoading && leadArticle && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center mb-20 pb-16 border-b border-white/10">
-            <div className="lg:col-span-7 aspect-[16/10] bg-charcoal overflow-hidden border border-white/10">
-              <Link to={`/journal/${leadArticle.slug}`}>
+            <div className="lg:col-span-7 aspect-[16/10] bg-charcoal overflow-hidden border border-white/10 relative">
+              <Link to={`/journal/${leadArticle.slug}`} className="block w-full h-full">
                 <img
-                  src={leadArticle.coverImageUrl || ''}
+                  src={
+                    leadArticle.coverImageUrl ||
+                    'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?q=80&w=1200&auto=format&fit=crop'
+                  }
                   alt={leadArticle.title}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src =
+                      'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?q=80&w=1200&auto=format&fit=crop';
+                  }}
                   className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
                 />
               </Link>
@@ -111,13 +118,22 @@ export const JournalPage: React.FC = () => {
         {/* Article Grid */}
         {!isLoading && otherArticles.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-            {otherArticles.map((art) => (
+            {otherArticles.map((art, idx) => (
               <div key={art.id} className="space-y-4">
-                <div className="aspect-[4/3] bg-charcoal overflow-hidden border border-white/10">
-                  <Link to={`/journal/${art.slug}`}>
+                <div className="aspect-[4/3] bg-charcoal overflow-hidden border border-white/10 relative">
+                  <Link to={`/journal/${art.slug}`} className="block w-full h-full">
                     <img
-                      src={art.coverImageUrl || ''}
+                      src={
+                        art.coverImageUrl ||
+                        (idx % 2 === 0
+                          ? 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1200&auto=format&fit=crop'
+                          : 'https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=1200&auto=format&fit=crop')
+                      }
                       alt={art.title}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src =
+                          'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1200&auto=format&fit=crop';
+                      }}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
                     />
                   </Link>
