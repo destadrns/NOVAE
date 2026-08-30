@@ -1,8 +1,6 @@
 # NOVAÉ
 
-> **Portfolio-grade full-stack digital fashion commerce prototype.**
-
-A digital-first contemporary fashion atelier combining editorial storytelling, immersive interactions, personalization, and a robust transactional commerce foundation.
+NOVAÉ is a digital-first contemporary fashion atelier exploring editorial storytelling, immersive interactions, personalization, and commerce.
 
 ![NOVAÉ Storefront Hero](docs/screenshots/hero-storefront.png)
 
@@ -10,9 +8,7 @@ A digital-first contemporary fashion atelier combining editorial storytelling, i
 
 ## Overview
 
-High-end digital fashion often forces a compromise: either template-driven e-commerce grids that lack editorial identity, or experimental showcase sites unable to handle real transactional inventory and multi-variant catalog workflows.
-
-NOVAÉ bridges this gap. Built from the ground up as a portfolio-grade commerce demonstration, it explores an avant-garde digital atelier experience featuring brutalist luxury aesthetics, inertial scroll interactions, bilingual narratives, and a structured multi-tier engineering architecture built on modern web standards.
+NOVAÉ combines editorial fashion presentation with a structured commerce backend. The application provides a bilingual customer storefront, product personalization tools, multi-variant catalog management, cart persistence, checkout, and backoffice order fulfillment.
 
 ```text
 Customer Frontend ─┐
@@ -21,32 +17,20 @@ Admin App ──────────┘
                     └──> Supabase Auth
 ```
 
----
-
-## Portfolio Positioning
-
-NOVAÉ is intentionally built as a functional portfolio and demonstration commerce environment. It features complete, production-grade architecture across all layers:
-
-- **Real Frontend Applications**: High-fidelity customer storefront and backoffice operations portal built with React, Vite, Tailwind CSS, GSAP, and Framer Motion.
-- **Real Backend APIs**: Strongly-typed RESTful service architecture built with NestJS, class-validator DTOs, and global exception envelopes.
-- **Real PostgreSQL Persistence**: 15 sequential SQL migrations, normalized relational models, strict foreign keys, CHECK constraints, and automated `updated_at` triggers via Prisma ORM.
-- **Real Authentication & RBAC**: Supabase Auth session verification with server-authoritative role evaluation (`customer` vs `admin`).
-- **Real Catalog & Inventory Logic**: Full multi-variant formulation, atomic transaction boundaries, optimistic reservation locks, and stock movement audit ledgers.
-- **Real Cart, Checkout & Order Lifecycle**: Persistent customer baskets, server-side price calculation snapshots, and sequential order generation (`NOV-YYYY-XXXX`).
-- **Simulated Payment Workflow**: Interactive in-browser payment simulator covering Virtual Accounts (BCA, Mandiri), QRIS, Credit Card, and Manual Transfer. **No real monetary transactions or banking credentials are processed.**
+> **Note on Payments**: NOVAÉ uses an integrated payment simulator for development and demonstration purposes. It supports Virtual Account (BCA, Mandiri), QRIS, Credit Card, and Manual Bank Transfer workflows. **No real monetary transactions or banking credentials are processed.**
 
 ---
 
 ## Preview
 
 ### Customer Storefront & Catalog
-Cinematic hero showcase featuring brutalist luxury typography, atmospheric soundscapes, inertial smooth scrolling with Lenis, and chapter-based collection discovery (`FORM`, `MOTION`, `IDENTITY`).
+Cinematic hero showcase featuring brutalist typography, atmospheric soundscapes, inertial smooth scrolling with Lenis, and chapter-based collection discovery (`FORM`, `MOTION`, `IDENTITY`).
 
 ![NOVAÉ Storefront](docs/screenshots/storefront.png)
 
 ---
 
-### Product Experience & Variant Matrix
+### Product Detail & Variant Matrix
 Studio photography gallery, dynamic color swatches, size availability selectors, fabric provenance specifications, and real-time inventory state badges.
 
 ![NOVAÉ Product Detail](docs/screenshots/product-detail.png)
@@ -60,7 +44,7 @@ Interactive multi-step questionnaire that translates aesthetic preferences and s
 
 ---
 
-### Customer Checkout & Simulated Payment
+### Checkout & Simulated Payment
 Multi-step checkout flow with shipping address capture, courier selection, server-authoritative pricing snapshots, and an interactive payment simulator modal.
 
 ![NOVAÉ Checkout & Order Summary](docs/screenshots/checkout.png)
@@ -68,14 +52,14 @@ Multi-step checkout flow with shipping address capture, courier selection, serve
 ---
 
 ### Atelier Operations Dashboard
-Executive backoffice overview presenting real-time business telemetry, gross revenue trends, capsule sales distributions, customer counts, and low-stock alerts.
+Backoffice dashboard presenting real-time business telemetry, revenue trends, capsule sales distributions, customer counts, and low-stock alerts.
 
 ![NOVAÉ Atelier Operations Dashboard](docs/screenshots/admin-dashboard.png)
 
 ---
 
 ### Inventory Management & SKU Matrix
-Real-time warehouse inventory matrix with physical vs reserved stock allocation, depletion thresholds, quick restock actions, and movement audit logs.
+Warehouse inventory matrix tracking physical vs reserved stock allocation, depletion thresholds, restock actions, and movement audit logs.
 
 ![NOVAÉ SKU Matrix & Inventory Operations](docs/screenshots/admin-inventory.png)
 
@@ -83,17 +67,17 @@ Real-time warehouse inventory matrix with physical vs reserved stock allocation,
 
 ## Key Product Experiences
 
-- **Editorial Storefront**: Avant-garde luxury aesthetic pairing responsive layouts with fluid typography, atmospheric soundscapes, and curated garment presentations.
+- **Editorial Storefront**: Minimalist luxury aesthetic pairing responsive layouts with fluid typography, atmospheric soundscapes, and curated garment presentations.
 - **Scroll-Driven Storytelling**: Inertial scrolling and cinematic chapter reveals orchestrated with Lenis, GSAP ScrollTrigger, and Framer Motion.
-- **Thematic Collections**: Curated capsule presentations exploring sculptural forms across `FORM` (Chapter 01), `MOTION` (Chapter 02), and `IDENTITY` (Chapter 03).
-- **Style Finder Personalization**: Interactive 3-step questionnaire matching aesthetic philosophies with curated garment suggestions.
+- **Thematic Collections**: Capsule presentations exploring sculptural forms across `FORM` (Chapter 01), `MOTION` (Chapter 02), and `IDENTITY` (Chapter 03).
+- **Style Finder Personalization**: 3-step questionnaire matching aesthetic philosophies with curated garment suggestions.
 - **Product & Variant Matrix**: Dynamic color swatches, size selection, localized garment provenance, and real-time inventory availability states.
-- **Bilingual Narrative**: Native Indonesian (`id`) and English (`en`) localization across all customer-facing copy, catalog metadata, and backoffice tooling.
-- **Customer Authentication**: Unified identity management powered by Supabase Auth with server-verified role-based access control.
-- **Persistent Cart & Wishlist**: Resilient basket persistence, polymorphic variant line items, guest-to-auth cart migration, and client-side state synchronization.
-- **Transactional Checkout & Order Placement**: Multi-step checkout with server-authoritative calculations, double-lock inventory reservations, and sequential `NOV-YYYY-XXXX` code generation.
+- **Bilingual Support**: Native Indonesian (`id`) and English (`en`) localization across customer-facing copy, catalog metadata, and backoffice tooling.
+- **Customer Authentication**: Identity management powered by Supabase Auth with server-verified role-based access control (`customer` vs `admin`).
+- **Persistent Cart & Wishlist**: Client and database basket persistence, polymorphic variant line items, and guest-to-authenticated cart merging.
+- **Checkout & Order Placement**: Multi-step checkout with server-authoritative calculations, double-lock inventory reservations, and sequential `NOV-YYYY-XXXX` order number generation.
 - **Simulated Payment Gateway**: Interactive sandbox modal supporting Virtual Account, QRIS, Credit Card 3DS, and Bank Transfer with instant Success, Failed, and Cancellation state handling.
-- **Atelier Backoffice Portal**: Operations dashboard for catalog formulation, variant matrix management, warehouse inventory tracking, and customer order fulfillment queues.
+- **Atelier Backoffice Portal**: Administrative operations portal for catalog management, variant matrix overrides, warehouse inventory tracking, and customer order fulfillment queues.
 
 ---
 
@@ -106,7 +90,7 @@ NOVAÉ/
 ├── frontend/             # Customer storefront (React, Vite, Tailwind CSS)
 ├── admin/                # Atelier backoffice (React, Vite, Tailwind CSS)
 ├── backend/              # REST API & database services (NestJS, Prisma, PostgreSQL)
-├── docs/                 # Public documentation & preview assets
+├── docs/                 # Documentation & preview assets
 │   └── screenshots/      # Application screenshots
 └── docker-compose.yml    # Local PostgreSQL container configuration
 ```
@@ -135,27 +119,27 @@ NOVAÉ/
 
 ### Testing & Quality Assurance
 - **Unit & Integration Testing**: Jest, Supertest
-- **In-Memory PostgreSQL Engine**: PGlite (for deterministic standalone database tests)
-- **Database Validation**: Custom 112-assertion E2E migration and constraint verification suite
+- **In-Memory PostgreSQL Engine**: PGlite (for standalone database tests)
+- **Database Validation**: 112-assertion migration and constraint verification suite
 
 ---
 
 ## Engineering Highlights
 
 - **Server-Authoritative RBAC**: Client session claims are never trusted directly. Every administrative endpoint validates identity and role claims (`customer` vs `admin`) directly against PostgreSQL records.
-- **Atomic Transaction Boundaries**: Multi-entity mutations—including product formulation, order placement, status transitions, and payment settlement—execute within atomic `prisma.$transaction` blocks with automatic rollback on error.
+- **Atomic Transaction Boundaries**: Multi-entity mutations—including product creation, order placement, status transitions, and payment settlement—execute within atomic `prisma.$transaction` blocks with automatic rollback on error.
 - **Optimistic Inventory Reservation**: Order creation reserves physical stock (`reservedQuantity`) during checkout. If payment fails or an order is cancelled, reserved units are automatically released back to available stock.
 - **Concurrency & Idempotency Safeguards**: Prevents double-order placement and concurrent cart conversion with transaction-level status locks.
 - **Non-Destructive Archiving**: Products and variants referenced in historical orders cannot be hard-deleted. Soft-delete archiving (`status = archived` / `inactive`) preserves audit integrity and foreign key constraints.
 - **Bilingual Schema Design**: Normalized translation tables with composite keys `(entity_id, language)` support multi-language content with automatic Indonesian-to-English fallback resolution.
 - **Safe Public Inventory Projections**: Customer-facing APIs only expose availability states (`available`, `isLowStock`, `isOutOfStock`), preventing internal warehouse counts and inventory movements from leaking to public clients.
-- **Comprehensive Test Coverage**: 92 unit tests across 9 service suites and 77 end-to-end integration tests across 8 API suites passing with zero errors.
+- **Automated Test Coverage**: 92 unit tests across 9 service suites and 77 end-to-end integration tests across 8 API suites passing with zero errors.
 
 ---
 
 ## Demo Flow
 
-Experience the complete end-to-end commerce lifecycle:
+The end-to-end commerce lifecycle flows through the following stages:
 
 ```text
 [ Storefront ]
@@ -202,9 +186,9 @@ Order Management (Review Customer Orders, Payment State & Update Fulfillment)
 
 ## Current Status
 
-### Completed & Functional
+### Implemented & Functional
 - **Database Architecture**: PostgreSQL schema with 15 SQL migrations, deterministic seed data, and a 112-assertion validation suite.
-- **Backend API Foundation**: Centralized error envelopes, validation pipes, structured logging, CORS, Swagger documentation, and health check probes.
+- **Backend REST API**: Centralized error envelopes, validation pipes, structured logging, CORS, Swagger documentation, and health check probes.
 - **Authentication & RBAC**: Supabase Auth integration, server-side profile provisioning, and role guards.
 - **Admin Catalog & Inventory API**: Transactional product CRUD, variant matrix management, stock adjustments, and inventory movement audit ledgers.
 - **Commerce Subsystem (Cart & Wishlist)**: Persistent customer cart, polymorphic variant addition, guest-to-auth cart merge, and live wishlist synchronization.
@@ -215,12 +199,12 @@ Order Management (Review Customer Orders, Payment State & Update Fulfillment)
 - **Admin Backoffice**: Live API connection, product catalog management, inventory matrix, stock adjustment modals, and order management dashboard with payment settlement badges and timestamps.
 - **Automated Verification**: 92 unit tests (9 suites) and 77 end-to-end integration tests (8 suites) passing with zero errors.
 
-### Upcoming Milestones
+### Upcoming Development
 - Customer order experience refinement & printable receipt view.
 - Fulfillment workflow refinement & packing slip generator.
 - Editorial Journal CMS & rich content publication.
-- Advanced atelier business analytics & inventory forecasting.
-- Final portfolio optimization and performance tuning.
+- Business analytics & inventory forecasting.
+- Performance optimization and bundle tuning.
 
 ---
 
