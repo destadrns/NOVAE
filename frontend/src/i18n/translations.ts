@@ -8,6 +8,7 @@ export const translations = {
         journal: 'JURNAL',
         about: 'ATELIER',
         search: 'CARI',
+        track: 'LACAK PESANAN',
         account: 'AKUN',
         bag: 'TAS',
         collectionsSub: 'Jelajahi Form, Motion, Identity',
@@ -15,6 +16,7 @@ export const translations = {
         styleFinderSub: 'Temukan Siluet Individual Anda',
         journalSub: 'Esai Budaya & Editorial',
         aboutSub: 'Atelier & Manifesto Brand',
+        trackSub: 'Pantau Status & Resi Pengiriman',
       },
 
       // Hero Section
@@ -430,6 +432,7 @@ export const translations = {
       journal: 'JOURNAL',
       about: 'ABOUT',
       search: 'SEARCH',
+      track: 'TRACK ORDER',
       account: 'ACCOUNT',
       bag: 'BAG',
       collectionsSub: 'Explore Form, Motion, Identity',
@@ -437,6 +440,7 @@ export const translations = {
       styleFinderSub: 'Find Your Individual Form',
       journalSub: 'Editorial & Culture Essays',
       aboutSub: 'The Atelier & Manifesto',
+      trackSub: 'Monitor Live Status & Courier Resi',
     },
 
     // Hero Section

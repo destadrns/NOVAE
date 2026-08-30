@@ -13,6 +13,7 @@ const JournalDetailPage = lazy(() => import('@/pages/Journal/JournalDetailPage')
 const AboutPage = lazy(() => import('@/pages/About/AboutPage').then(m => ({ default: m.AboutPage })));
 const AccountPage = lazy(() => import('@/pages/Account/AccountPage').then(m => ({ default: m.AccountPage })));
 const CheckoutPage = lazy(() => import('@/pages/Checkout/CheckoutPage').then(m => ({ default: m.CheckoutPage })));
+const TrackOrderPage = lazy(() => import('@/pages/Track/TrackOrderPage').then(m => ({ default: m.TrackOrderPage })));
 
 // Minimal loading fallback — matches the NOVAÉ dark aesthetic
 const PageLoader = () => (
@@ -71,6 +72,8 @@ export const AppRoutes: React.FC = () => {
           <Route path="/journal/:slug" element={<JournalDetailPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/track" element={<TrackOrderPage />} />
+          <Route path="/tracking" element={<TrackOrderPage />} />
           <Route
             path="/account"
             element={

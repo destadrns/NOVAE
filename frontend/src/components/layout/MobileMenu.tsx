@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowRight, Instagram, Compass, User } from 'lucide-react';
+import { X, ArrowRight, Instagram, Compass, User, Truck } from 'lucide-react';
 import { useUIStore } from '@/store/useUIStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTranslation } from '@/i18n/useTranslation';
@@ -87,11 +87,37 @@ export const MobileMenu: React.FC = () => {
               </motion.div>
             ))}
 
-            {/* Account Link in Mobile Menu */}
+            {/* Track Order Link in Mobile Menu */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 + links.length * 0.06, duration: 0.4 }}
+            >
+              <Link
+                to="/track"
+                onClick={closeMobileMenu}
+                className="group flex items-center justify-between py-1.5 sm:py-2 text-xl xs:text-2xl sm:text-3xl font-display font-bold tracking-tight hover:text-cyan-300 transition-colors"
+              >
+                <div className="min-w-0 pr-4 flex items-center gap-3">
+                  <Truck className="w-5 h-5 text-cyan-400" />
+                  <div>
+                    <span className="block text-bone group-hover:text-cyan-300">
+                      {t.nav.track || 'LACAK PESANAN'}
+                    </span>
+                    <span className="block text-[11px] sm:text-xs font-sans font-normal tracking-wider text-muted mt-0.5 leading-snug">
+                      {t.nav.trackSub || 'Pantau Status & Resi Pengiriman'}
+                    </span>
+                  </div>
+                </div>
+                <ArrowRight className="w-5 h-5 opacity-40 group-hover:opacity-100 group-hover:translate-x-2 transition-all shrink-0 text-cyan-400" />
+              </Link>
+            </motion.div>
+
+            {/* Account Link in Mobile Menu */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 + (links.length + 1) * 0.06, duration: 0.4 }}
             >
               <button
                 onClick={handleAccountClick}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, ShoppingBag, Menu, X, User } from 'lucide-react';
+import { Search, ShoppingBag, Menu, X, User, Truck } from 'lucide-react';
 import { useUIStore } from '@/store/useUIStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -111,15 +111,36 @@ export const Navbar: React.FC = () => {
             <span className="hidden 2xl:inline">{t.nav.search}</span>
           </button>
 
-          {/* Account Button / Modal Trigger */}
-          <button
-            onClick={() => openAuthModal()}
-            className="hidden 2xl:flex items-center gap-1.5 text-xs uppercase tracking-[0.16em] text-muted-light hover:text-bone hover:bg-white/5 transition-all py-1 px-2.5 rounded-sm shrink-0"
-            aria-label="Customer Account"
+          {/* Track Order Direct Link */}
+          <Link
+            to="/track"
+            className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-muted-light hover:text-cyan-300 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30 transition-all py-1.5 px-2 sm:px-2.5 rounded-sm shrink-0"
+            aria-label="Track Order"
           >
-            <User className="w-3.5 h-3.5 text-muted-light group-hover:text-bone" />
-            <span>{isAuthenticated && user ? user.fullName.split(' ')[0] : t.nav.account}</span>
-          </button>
+            <Truck className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">{t.nav.track || 'LACAK PESANAN'}</span>
+          </Link>
+
+          {/* Account Button / Link */}
+          {isAuthenticated && user ? (
+            <Link
+              to="/account"
+              className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-bone bg-white/5 hover:bg-white/10 border border-white/15 transition-all py-1.5 px-2.5 rounded-sm shrink-0 shadow-sm"
+              aria-label="Customer Account"
+            >
+              <User className="w-3.5 h-3.5 text-accent-lime" />
+              <span className="max-w-[80px] sm:max-w-[120px] truncate">{user.fullName ? user.fullName.split(' ')[0] : t.nav.account}</span>
+            </Link>
+          ) : (
+            <button
+              onClick={() => openAuthModal()}
+              className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-muted-light hover:text-bone hover:bg-white/5 border border-white/10 transition-all py-1.5 px-2.5 rounded-sm shrink-0"
+              aria-label="Customer Account"
+            >
+              <User className="w-3.5 h-3.5 text-muted-light" />
+              <span className="hidden sm:inline">{t.nav.account}</span>
+            </button>
+          )}
 
           {/* Bag Drawer Trigger */}
           <button

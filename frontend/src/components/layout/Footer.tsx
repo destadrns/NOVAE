@@ -81,6 +81,11 @@ export const Footer: React.FC = () => {
                   {t.nav.about}
                 </Link>
               </li>
+              <li>
+                <Link to="/track" className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1.5 transition-colors">
+                  <span>{t.nav.track || 'LACAK PESANAN'}</span>
+                </Link>
+              </li>
             </ul>
           </div>
 
