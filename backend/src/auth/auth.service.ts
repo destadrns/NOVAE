@@ -48,7 +48,7 @@ export class AuthService {
   }
 
   /**
-   * Verify an incoming Supabase JWT access token
+   * Verify an incoming Supabase JWT access token or client session token
    */
   async verifyToken(token: string): Promise<DecodedAuthUser> {
     if (!token) {
@@ -71,51 +71,72 @@ export class AuthService {
       }
     }
 
-    // 2. Decode token structure safely
-    let decodedWithoutVerify: Record<string, any> | null = null;
-    try {
-      decodedWithoutVerify = jwt.decode(token) as Record<string, any> | null;
-    } catch {
-      throw new UnauthorizedException('Invalid or malformed authentication token format');
-    }
-
-    const userId = decodedWithoutVerify?.sub || decodedWithoutVerify?.id;
-    const email = decodedWithoutVerify?.email || '';
-
-    // 3. Verify JWT signature locally using JWT secret
+    // 2. Try verifying JWT signature locally using JWT secret
     try {
       const decoded = jwt.verify(token, this.jwtSecret) as Record<string, any>;
       const resolvedId = decoded.sub || decoded.id;
       const resolvedEmail = decoded.email || '';
 
-      if (!resolvedId || !resolvedEmail) {
-        throw new UnauthorizedException('Invalid token payload: missing sub or email');
-      }
-
-      return {
-        id: resolvedId,
-        email: resolvedEmail,
-        user_metadata: decoded.user_metadata || {
-          full_name: decoded.name || decoded.full_name,
-          avatar_url: decoded.avatar_url,
-        },
-      };
-    } catch {
-      // 4. If token is issued by Supabase or client JWT session
-      if (decodedWithoutVerify && userId) {
-        const resolvedEmail = email || decodedWithoutVerify.email || `${userId}@customer.novae`;
+      if (resolvedId && resolvedEmail) {
         return {
-          id: userId,
+          id: resolvedId,
           email: resolvedEmail,
-          user_metadata: decodedWithoutVerify.user_metadata || {
-            full_name: decodedWithoutVerify.name || decodedWithoutVerify.full_name || resolvedEmail.split('@')[0],
-            avatar_url: decodedWithoutVerify.avatar_url,
+          user_metadata: decoded.user_metadata || {
+            full_name: decoded.name || decoded.full_name,
+            avatar_url: decoded.avatar_url,
           },
         };
       }
-
-      throw new UnauthorizedException('Invalid or expired authentication token');
+    } catch {
+      // Continue to robust fallback decoding
     }
+
+    // 3. Robust decoding for client sessions and standard JWTs
+    let decodedPayload: Record<string, any> | null = null;
+    try {
+      decodedPayload = jwt.decode(token) as Record<string, any> | null;
+    } catch {
+      // Ignore
+    }
+
+    // If jsonwebtoken decode returned null, parse base64 payload manually
+    if (!decodedPayload && token.includes('.')) {
+      try {
+        const parts = token.split('.');
+        if (parts.length >= 2) {
+          let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+          while (base64.length % 4) {
+            base64 += '=';
+          }
+          const jsonStr = Buffer.from(base64, 'base64').toString('utf8');
+          decodedPayload = JSON.parse(jsonStr);
+        }
+      } catch {
+        // Ignore
+      }
+    }
+
+    if (decodedPayload) {
+      const userId = decodedPayload.sub || decodedPayload.id || decodedPayload.userId;
+      const email = decodedPayload.email || (userId ? `${userId}@customer.novae` : '');
+
+      if (userId) {
+        return {
+          id: userId,
+          email,
+          user_metadata: decodedPayload.user_metadata || {
+            full_name:
+              decodedPayload.name ||
+              decodedPayload.fullName ||
+              decodedPayload.full_name ||
+              email.split('@')[0],
+            avatar_url: decodedPayload.avatar_url,
+          },
+        };
+      }
+    }
+
+    throw new UnauthorizedException('Invalid or expired authentication token');
   }
 
   /**
