@@ -77,12 +77,12 @@ export const JournalPage: React.FC = () => {
                 <img
                   src={
                     leadArticle.coverImageUrl ||
-                    'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?q=80&w=1200&auto=format&fit=crop'
+                    'https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1200&auto=format&fit=crop'
                   }
                   alt={leadArticle.title}
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).src =
-                      'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?q=80&w=1200&auto=format&fit=crop';
+                      'https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1200&auto=format&fit=crop';
                   }}
                   className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
                 />
