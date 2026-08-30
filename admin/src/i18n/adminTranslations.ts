@@ -97,6 +97,16 @@ export const adminTranslations = {
       capsuleShareTitle: 'Distribusi Penjualan Kapsul',
       capsuleShareSubtitle: 'Pangsa volume berdasarkan seri koleksi',
       piecesSold: '{count} terjual',
+      topSellingTitle: 'Produk Terlaris',
+      topSellingSubtitle: 'Berdasarkan volume penjualan unit',
+      topSellingEmpty: 'Belum ada riwayat penjualan produk',
+      styleFinderTitle: 'Wawasan Style Finder',
+      styleFinderSubtitle: '{count} profil personalisasi terkalkulasi',
+      refreshBtn: 'Segarkan',
+      timeRange7d: '7 Hari',
+      timeRange30d: '30 Hari',
+      timeRange90d: '90 Hari',
+      timeRangeAll: 'Semua Waktu',
     },
 
     // Products Page
@@ -418,6 +428,16 @@ export const adminTranslations = {
       capsuleShareTitle: 'Capsule Sales Distribution',
       capsuleShareSubtitle: 'Volume share by collection series',
       piecesSold: '{count} sold',
+      topSellingTitle: 'Top Selling Products',
+      topSellingSubtitle: 'Ranked by unit sales volume',
+      topSellingEmpty: 'No product sales recorded yet',
+      styleFinderTitle: 'Style Finder Insights',
+      styleFinderSubtitle: '{count} completed style questionnaires',
+      refreshBtn: 'Refresh',
+      timeRange7d: '7 Days',
+      timeRange30d: '30 Days',
+      timeRange90d: '90 Days',
+      timeRangeAll: 'All Time',
     },
 
     // Products Page

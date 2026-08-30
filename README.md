@@ -133,7 +133,7 @@ NOVAÉ/
 - **Non-Destructive Archiving**: Products and variants referenced in historical orders cannot be hard-deleted. Soft-delete archiving (`status = archived` / `inactive`) preserves audit integrity and foreign key constraints.
 - **Bilingual Schema Design**: Normalized translation tables with composite keys `(entity_id, language)` support multi-language content with automatic Indonesian-to-English fallback resolution.
 - **Safe Public Inventory Projections**: Customer-facing APIs only expose availability states (`available`, `isLowStock`, `isOutOfStock`), preventing internal warehouse counts and inventory movements from leaking to public clients.
-- **Automated Test Coverage**: 92 unit tests across 9 service suites and 77 end-to-end integration tests across 8 API suites passing with zero errors.
+- **Automated Test Coverage**: 105 unit tests across 11 service suites and 95 end-to-end integration tests across 10 API suites passing with zero errors.
 
 ---
 
@@ -145,7 +145,7 @@ The end-to-end commerce lifecycle flows through the following stages:
 [ Storefront ]
       │
       ▼
-Browse Collections (FORM / MOTION / IDENTITY)
+Browse Collections (FORM / MOTION / IDENTITY) & Read Journal
       │
       ▼
 Product Detail (Select Color & Size)
@@ -163,7 +163,7 @@ Place Order (Atomic Stock Reservation & NOV-YYYY-XXXX Generation)
 Simulated Payment (Select VA / QRIS / Card → Trigger SUCCESS / FAILED / CANCEL)
       │
       ▼
-Customer Account (Inspect Order History & Payment Settlement)
+Customer Account (Inspect Order History, Detail Modal & Status Stepper)
 ```
 
 ```text
@@ -173,13 +173,16 @@ Customer Account (Inspect Order History & Payment Settlement)
 Admin Login (Role-Verified Portal Access)
       │
       ▼
-Operations Dashboard (Inspect Revenue & Low-Stock Alerts)
+Operations Dashboard (Inspect Live Revenue, Time Range Filters, Top Products & Style Finder Insights)
       │
       ▼
-Inventory Matrix (Monitor Reserved vs Physical Quantities)
+Inventory Matrix (Monitor Reserved vs Physical Quantities & Quick Restock)
       │
       ▼
-Order Management (Review Customer Orders, Payment State & Update Fulfillment)
+Order Management (Review Orders, Payment State & Update Fulfillment Lifecycle)
+      │
+      ▼
+Journal CMS (Create, Edit, Publish, Preview & Archive Bilingual Articles)
 ```
 
 ---
@@ -189,22 +192,24 @@ Order Management (Review Customer Orders, Payment State & Update Fulfillment)
 ### Implemented & Functional
 - **Database Architecture**: PostgreSQL schema with 15 SQL migrations, deterministic seed data, and a 112-assertion validation suite.
 - **Backend REST API**: Centralized error envelopes, validation pipes, structured logging, CORS, Swagger documentation, and health check probes.
-- **Authentication & RBAC**: Supabase Auth integration, server-side profile provisioning, and role guards.
+- **Authentication & RBAC**: Supabase Auth integration, server-side profile provisioning, and role guards (`SupabaseAuthGuard`, `RolesGuard`).
 - **Admin Catalog & Inventory API**: Transactional product CRUD, variant matrix management, stock adjustments, and inventory movement audit ledgers.
 - **Commerce Subsystem (Cart & Wishlist)**: Persistent customer cart, polymorphic variant addition, guest-to-auth cart merge, and live wishlist synchronization.
 - **Customer Checkout & Order Placement**: Multi-step checkout (`/checkout`), shipping address form, courier selection, server-authoritative calculations, and atomic order creation.
 - **Admin Order Management**: Protected `/api/v1/admin/orders` endpoints, status filtering, search, order detail drawer, status timeline, inventory reservation context, and controlled state transitions (`pending → paid → processing → shipped → delivered`).
+- **Customer Order Experience & Fulfillment**: Customer order detail view with 5-stage progress timeline, tracking number, item pricing snapshots, bilingual ID/EN, and fulfillment workflow controls.
 - **Simulated Payment Workflow**: End-to-end simulated payment flow (`POST /api/v1/orders/:id/simulate-payment`) supporting Virtual Accounts (BCA, Mandiri), QRIS, Credit Card, and Manual Transfer. Full state machine sync between `Payment.status` and `Order.paymentStatus`, interactive sandbox simulator modal on checkout & account pages, and automatic inventory release on cancellation.
+- **Journal CMS & Editorial Publication**: Bilingual article publishing platform (`/api/v1/articles` public + `/api/v1/admin/articles` CMS), supporting draft/published/archived lifecycles, slug routing, reading time estimates, categories, author metadata, and drawer preview.
+- **Analytics & Business Insights**: Live operational analytics (`/api/v1/admin/analytics/overview`), time-range filtering (`7D`, `30D`, `90D`, `ALL`), gross revenue trends, capsule volume distribution, top-selling products leaderboard, customer activity metrics, Style Finder telemetry, and low-stock quick restock actions.
 - **Customer Storefront**: Responsive interface, bilingual switcher, Style Finder, product detail pages, cart drawer, live customer order history, and payment simulator triggers.
-- **Admin Backoffice**: Live API connection, product catalog management, inventory matrix, stock adjustment modals, and order management dashboard with payment settlement badges and timestamps.
-- **Automated Verification**: 92 unit tests (9 suites) and 77 end-to-end integration tests (8 suites) passing with zero errors.
+- **Admin Backoffice**: Live API connection, product catalog management, inventory matrix, stock adjustment modals, order fulfillment dashboard, journal CMS, and operational telemetry.
+- **Automated Verification**: 105 unit tests (11 suites) and 95 end-to-end integration tests (10 suites) passing with zero errors.
 
 ### Upcoming Development
-- Customer order experience refinement & printable receipt view.
-- Fulfillment workflow refinement & packing slip generator.
-- Editorial Journal CMS & rich content publication.
-- Business analytics & inventory forecasting.
-- Performance optimization and bundle tuning.
+- Printable order invoices & packing slip PDF generator.
+- Streaming CSV export for financial and inventory reports.
+- Rich-text markdown / WYSIWYG editor for Journal CMS.
+- Predictive machine-learning replenishment forecasting.
 
 ---
 
@@ -312,10 +317,10 @@ npm --prefix admin run dev
 ### 6. Run Automated Test Suites
 
 ```bash
-# Run all backend unit test suites (92 tests)
+# Run all backend unit test suites (105 tests)
 npm --prefix backend run test
 
-# Run all backend end-to-end integration test suites (77 tests)
+# Run all backend end-to-end integration test suites (95 tests)
 npm --prefix backend run test:e2e
 ```
 

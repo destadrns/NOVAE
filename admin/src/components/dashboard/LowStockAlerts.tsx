@@ -1,22 +1,44 @@
 import React from 'react';
-import { useAdminDataStore } from '@/store/useAdminDataStore';
 import { useAdminUIStore } from '@/store/useAdminUIStore';
 import { useAdminTranslation } from '@/i18n/useAdminTranslation';
-import { AlertTriangle, Plus, Check } from 'lucide-react';
+import { AlertTriangle, Plus, Check, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { AdminLowStockAlert, adminAdjustStock } from '@/lib/api';
+import { useAdminAuthStore } from '@/store/useAdminAuthStore';
 
-export const LowStockAlerts: React.FC = () => {
-  const { inventory, adjustStock } = useAdminDataStore();
+interface LowStockAlertsProps {
+  alerts?: AdminLowStockAlert[];
+  isLoading?: boolean;
+  onRestocked?: () => void;
+}
+
+export const LowStockAlerts: React.FC<LowStockAlertsProps> = ({
+  alerts = [],
+  isLoading = false,
+  onRestocked,
+}) => {
+  const { token } = useAdminAuthStore();
   const { addToast } = useAdminUIStore();
   const { t, format } = useAdminTranslation();
 
-  const lowStockItems = inventory.filter(
-    (i) => i.status === 'LOW_STOCK' || i.status === 'OUT_OF_STOCK'
-  );
+  const handleQuickRestock = async (item: AdminLowStockAlert) => {
+    const { error } = await adminAdjustStock(token, {
+      variantId: item.variantId,
+      movementType: 'restock',
+      quantityDelta: 5,
+      note: 'Quick restock from dashboard alerts',
+    });
 
-  const handleQuickRestock = (item: typeof inventory[0]) => {
-    adjustStock(item.id, 5);
+    if (error) {
+      addToast({
+        type: 'error',
+        title: 'Restock Failed',
+        message: Array.isArray(error.message) ? error.message.join(', ') : error.message,
+      });
+      return;
+    }
+
     addToast({
       type: 'success',
       title: t.feedback.stockUpdated,
@@ -26,7 +48,22 @@ export const LowStockAlerts: React.FC = () => {
         sku: item.sku,
       }),
     });
+
+    if (onRestocked) {
+      onRestocked();
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-5 rounded-sm bg-surface border border-surface-border h-full flex flex-col justify-center items-center text-center min-h-[280px]">
+        <Loader2 className="w-6 h-6 text-accent-lime animate-spin mb-2" />
+        <p className="text-xs font-mono text-muted uppercase tracking-wider">
+          {t.dashboard.lowStockTitle}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-5 rounded-sm bg-surface border border-surface-border h-full flex flex-col justify-between space-y-4">
@@ -35,9 +72,9 @@ export const LowStockAlerts: React.FC = () => {
         <div>
           <h3 className="text-xs font-mono uppercase tracking-widest text-bone font-semibold flex items-center gap-2">
             <span>{t.dashboard.lowStockTitle}</span>
-            {lowStockItems.length > 0 && (
+            {alerts.length > 0 && (
               <Badge variant="amber" size="sm">
-                {format(t.dashboard.actionReqBadge, { count: lowStockItems.length })}
+                {format(t.dashboard.actionReqBadge, { count: alerts.length })}
               </Badge>
             )}
           </h3>
@@ -49,14 +86,14 @@ export const LowStockAlerts: React.FC = () => {
 
       {/* Content */}
       <div className="flex-1 flex flex-col justify-center">
-        {lowStockItems.length === 0 ? (
+        {alerts.length === 0 ? (
           <div className="flex items-center justify-center py-6 text-center text-xs font-mono text-muted gap-2">
             <Check className="w-4 h-4 text-emerald-400" />
             <span>{t.dashboard.allStockHealthy}</span>
           </div>
         ) : (
           <div className="space-y-2.5">
-            {lowStockItems.map((item) => (
+            {alerts.slice(0, 4).map((item) => (
               <div
                 key={item.id}
                 className="flex items-center justify-between gap-3 p-3 rounded-sm bg-charcoal border border-surface-border hover:border-amber-500/30 transition-all text-xs"

@@ -574,3 +574,122 @@ export async function adminArchiveArticle(token: string | null, id: string) {
 export async function adminDeleteArticle(token: string | null, id: string) {
   return fetchWithAuth<{ success: boolean; message: string }>(`/admin/articles/${id}`, token, { method: 'DELETE' });
 }
+
+// ================================================================
+// ANALYTICS & BUSINESS INSIGHTS (Admin)
+// ================================================================
+
+export interface AdminAnalyticsMetrics {
+  grossSales: number;
+  grossSalesChange: number;
+  totalOrders: number;
+  totalOrdersChange: number;
+  totalPiecesInStock: number;
+  totalPiecesSold: number;
+  lowStockItemsCount: number;
+  activeCustomers: number;
+  activeCustomersChange: number;
+  averageOrderValue: number;
+}
+
+export interface AdminSalesTrendPoint {
+  date: string;
+  sales: number;
+  orders: number;
+}
+
+export interface AdminCapsuleShare {
+  code: string;
+  label: string;
+  tagline: string;
+  share: number;
+  pieces: number;
+  revenue: number;
+  color: string;
+  textColor: string;
+}
+
+export interface AdminTopSellingProduct {
+  id: string;
+  name: string;
+  slug: string;
+  skuRoot: string;
+  category: string;
+  unitsSold: number;
+  revenue: number;
+  imageUrl?: string | null;
+}
+
+export interface AdminLowStockAlert {
+  id: string;
+  variantId: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  color: string;
+  size: string;
+  stock: number;
+  reserved: number;
+  available: number;
+  threshold: number;
+  status: 'LOW_STOCK' | 'OUT_OF_STOCK' | 'IN_STOCK';
+}
+
+export interface AdminRecentOrderSummary {
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  shippingCity: string;
+  itemCount: number;
+  totalAmount: number;
+  status: string;
+  createdAt: string;
+}
+
+export interface AdminCustomerActivity {
+  totalCustomers: number;
+  newCustomers: number;
+  activeCarts: number;
+  totalWishlistItems: number;
+}
+
+export interface AdminStyleFinderMetrics {
+  totalProfiles: number;
+  archetypeDistribution: Record<string, number>;
+}
+
+export interface AdminDashboardOverview {
+  metrics: AdminAnalyticsMetrics;
+  salesTrend: AdminSalesTrendPoint[];
+  capsuleDistribution: AdminCapsuleShare[];
+  orderStatusDistribution: Record<string, number>;
+  topSellingProducts: AdminTopSellingProduct[];
+  lowStockAlerts: AdminLowStockAlert[];
+  recentOrders: AdminRecentOrderSummary[];
+  customerActivity: AdminCustomerActivity;
+  styleFinder: AdminStyleFinderMetrics;
+}
+
+export async function adminGetAnalyticsOverview(
+  token: string | null,
+  range: '7d' | '30d' | '90d' | 'all' = '30d',
+  lang: string = 'id',
+) {
+  return fetchWithAuth<AdminDashboardOverview>(`/admin/analytics/overview?range=${range}&lang=${lang}`, token);
+}
+
+export async function adminAdjustStock(
+  token: string | null,
+  payload: {
+    variantId: string;
+    movementType: string;
+    quantityDelta: number;
+    note?: string;
+  },
+) {
+  return fetchWithAuth<any>(`/admin/inventory/${payload.variantId}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
