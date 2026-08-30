@@ -714,16 +714,41 @@ export class AdminCatalogService {
   }
 
   /**
+   * Safely find collection by UUID, slug, or code
+   */
+  private async findCollectionByIdOrSlug(idOrSlug: string) {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+    if (isUUID) {
+      const col = await this.prisma.collection.findUnique({
+        where: { id: idOrSlug },
+      });
+      if (col) return col;
+    }
+
+    const cleanSlug = idOrSlug.replace(/^col-/i, '').toLowerCase();
+    return this.prisma.collection.findFirst({
+      where: {
+        OR: [
+          { slug: cleanSlug },
+          { slug: idOrSlug.toLowerCase() },
+          { code: idOrSlug.toUpperCase() },
+          { code: cleanSlug.toUpperCase() },
+        ],
+      },
+    });
+  }
+
+  /**
    * Update collection and translations
    */
   async updateCollection(id: string, dto: UpdateCollectionDto) {
-    const collection = await this.prisma.collection.findUnique({
-      where: { id },
-    });
+    const collection = await this.findCollectionByIdOrSlug(id);
 
     if (!collection) {
-      throw new NotFoundException(`Collection with ID '${id}' not found`);
+      throw new NotFoundException(`Collection '${id}' not found`);
     }
+
+    const targetId = collection.id;
 
     return this.prisma.$transaction(async (tx) => {
       const updateData: Prisma.CollectionUpdateInput = {};
@@ -736,7 +761,7 @@ export class AdminCatalogService {
       if (dto.sortOrder !== undefined) updateData.sortOrder = dto.sortOrder;
 
       const updated = await tx.collection.update({
-        where: { id },
+        where: { id: targetId },
         data: updateData,
       });
 
@@ -745,7 +770,7 @@ export class AdminCatalogService {
           await tx.collectionTranslation.upsert({
             where: {
               collectionId_language: {
-                collectionId: id,
+                collectionId: targetId,
                 language: t.language,
               },
             },
@@ -754,7 +779,7 @@ export class AdminCatalogService {
               description: t.description,
             },
             create: {
-              collectionId: id,
+              collectionId: targetId,
               language: t.language,
               name: t.name,
               description: t.description,
@@ -771,18 +796,16 @@ export class AdminCatalogService {
    * Delete collection
    */
   async deleteCollection(id: string) {
-    const collection = await this.prisma.collection.findUnique({
-      where: { id },
-    });
+    const collection = await this.findCollectionByIdOrSlug(id);
 
     if (!collection) {
-      throw new NotFoundException(`Collection with ID '${id}' not found`);
+      throw new NotFoundException(`Collection '${id}' not found`);
     }
 
-    await this.prisma.collection.delete({ where: { id } });
+    await this.prisma.collection.delete({ where: { id: collection.id } });
     return {
       message: 'Collection deleted successfully',
-      id,
+      id: collection.id,
     };
   }
 }

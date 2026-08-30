@@ -10,7 +10,7 @@ import { Edit3, Plus, RefreshCw } from 'lucide-react';
 
 const FALLBACK_COLLECTIONS: BackendCollection[] = [
   {
-    id: 'col-form',
+    id: '00000000-0000-0000-0004-000000000001',
     code: 'FORM',
     slug: 'form',
     name: 'FORM — Chapter 01',
@@ -37,7 +37,7 @@ const FALLBACK_COLLECTIONS: BackendCollection[] = [
     ],
   },
   {
-    id: 'col-motion',
+    id: '00000000-0000-0000-0004-000000000002',
     code: 'MOTION',
     slug: 'motion',
     name: 'MOTION — Kinetic Flow',
@@ -64,7 +64,7 @@ const FALLBACK_COLLECTIONS: BackendCollection[] = [
     ],
   },
   {
-    id: 'col-identity',
+    id: '00000000-0000-0000-0004-000000000003',
     code: 'IDENTITY',
     slug: 'identity',
     name: 'IDENTITY — Raw Expression',
