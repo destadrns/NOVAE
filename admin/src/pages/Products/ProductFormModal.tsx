@@ -324,9 +324,21 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         isNewDrop,
         limitedRun,
         primaryImageUrl: primaryImageUrl || null,
-        translations: translationsPayload,
-        tags,
-        images: galleryImages,
+        translations: translationsPayload.map((t) => ({
+          language: t.language,
+          name: t.name,
+          shortDescription: t.shortDescription || undefined,
+          description: t.description || undefined,
+          materialDescription: t.materialDescription || undefined,
+          provenanceText: t.provenanceText || undefined,
+        })),
+        tags: Array.from(new Set(tags.map((t) => t.trim()).filter(Boolean))),
+        images: galleryImages.map((img, idx) => ({
+          imageUrl: img.imageUrl,
+          altText: img.altText || undefined,
+          sortOrder: img.sortOrder ?? idx,
+          isPrimary: Boolean(img.isPrimary),
+        })),
       };
 
       const { data, error } = await adminUpdateProduct(token, product.id, updatePayload);

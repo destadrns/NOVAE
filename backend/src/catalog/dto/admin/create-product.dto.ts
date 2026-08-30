@@ -16,6 +16,16 @@ import {
 import { LanguageCode, ProductStatus, VariantStatus } from '@prisma/client';
 
 export class ProductTranslationInputDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  id?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  productId?: string;
+
   @ApiProperty({ enum: LanguageCode, example: LanguageCode.id })
   @IsEnum(LanguageCode)
   language: LanguageCode;
@@ -44,9 +54,27 @@ export class ProductTranslationInputDto {
   @IsOptional()
   @IsString()
   provenanceText?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  createdAt?: any;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  updatedAt?: any;
 }
 
 export class ProductImageInputDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  id?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  productId?: string;
+
   @ApiProperty({ example: 'https://images.unsplash.com/photo-1544441893-675973e31985' })
   @IsString()
   @IsNotEmpty()
@@ -66,6 +94,14 @@ export class ProductImageInputDto {
   @IsOptional()
   @IsBoolean()
   isPrimary?: boolean = false;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  createdAt?: any;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  updatedAt?: any;
 }
 
 export class ProductVariantInputDto {
