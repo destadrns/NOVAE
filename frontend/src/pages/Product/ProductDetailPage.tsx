@@ -36,8 +36,28 @@ export const ProductDetailPage: React.FC = () => {
   const { toggleWishlist, isInWishlist } = useWishlistStore();
   const { token, isAuthenticated, openAuthModal } = useAuthStore();
 
-  // Fetch live product details from API
+  // Scroll to top and immediately sync when slug or language changes
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
+    const matched =
+      storeProducts.find((p) => p.slug === slug) ||
+      PRODUCTS.find((p) => p.slug === slug);
+
+    if (matched) {
+      setRawProduct(matched);
+      if (matched.colors && matched.colors[0]) {
+        setSelectedColor(matched.colors[0].name);
+      }
+      if (matched.sizes && matched.sizes[0]) {
+        setSelectedSize(matched.sizes[0]);
+      }
+    }
+
+    setSelectedImage(0);
+    setIsAdding(false);
+    setJustAdded(false);
+
     let isMounted = true;
     if (slug) {
       apiGetProductBySlug(slug, language).then(({ data }) => {
@@ -56,14 +76,7 @@ export const ProductDetailPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [slug, language]);
-
-  // Reset local image/state when slug changes
-  useEffect(() => {
-    setSelectedImage(0);
-    setIsAdding(false);
-    setJustAdded(false);
-  }, [slug]);
+  }, [slug, language, storeProducts]);
 
   // Calculate dynamic active price (support variant price override)
   const activeVariant = (rawProduct as any).variants?.find(
@@ -76,7 +89,10 @@ export const ProductDetailPage: React.FC = () => {
     : product.price;
 
   const isFavorited = isInWishlist(product.id);
-  const relatedProducts = storeProducts.filter((p) => p.id !== product.id).slice(0, 3).map(getLocalizedProduct);
+  const relatedProducts = storeProducts
+    .filter((p) => p.slug !== slug && p.id !== product.id)
+    .slice(0, 3)
+    .map(getLocalizedProduct);
 
   const handleAddToCart = () => {
     if (!isAuthenticated) {
@@ -101,6 +117,13 @@ export const ProductDetailPage: React.FC = () => {
     }, 400);
   };
 
+  const currentMainImage =
+    product.images && product.images[selectedImage]
+      ? product.images[selectedImage]
+      : product.images && product.images[0]
+      ? product.images[0]
+      : 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=800';
+
   return (
     <div className="pt-28 pb-32 bg-obsidian text-bone min-h-screen">
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
@@ -117,14 +140,15 @@ export const ProductDetailPage: React.FC = () => {
 
         {/* Main Product Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start pb-20 border-b border-white/10">
-          {/* Gallery Column (7 cols) */}
-          <div className="lg:col-span-7 space-y-4">
+          {/* Gallery Column (7 cols) - Sticky & Smooth */}
+          <div className="lg:col-span-7 lg:sticky lg:top-28 self-start space-y-4">
             {/* Primary Large Image */}
             <div className="aspect-[4/5] bg-charcoal-dark border border-white/10 overflow-hidden relative group">
               <img
-                src={product.images[selectedImage] || product.images[0]}
+                key={`${product.id}-${selectedImage}`}
+                src={currentMainImage}
                 alt={product.name}
-                className="w-full h-full object-cover object-center transition-all duration-500"
+                className="w-full h-full object-cover object-center transition-opacity duration-300"
               />
               <div className="absolute top-4 left-4 bg-obsidian/80 backdrop-blur-md px-3 py-1 text-[10px] font-mono tracking-widest uppercase border border-white/10">
                 SERIES {product.collection}
@@ -132,7 +156,7 @@ export const ProductDetailPage: React.FC = () => {
             </div>
 
             {/* Thumbnail selector */}
-            {product.images.length > 1 && (
+            {product.images && product.images.length > 1 && (
               <div className="grid grid-cols-4 gap-3">
                 {product.images.map((img, idx) => (
                   <button
