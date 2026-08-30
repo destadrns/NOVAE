@@ -104,8 +104,15 @@ export const OrdersListPage: React.FC = () => {
   const handleOpenInspect = (order: BackendAdminOrder) => {
     setInspectOrder(order);
     setNewStatus('');
-    setTrackingNumber('');
+    setTrackingNumber(order.shipment?.trackingNumber || '');
     setStatusNote('');
+  };
+
+  const handleStatusChange = (val: string) => {
+    setNewStatus(val);
+    if (val === 'shipped' && !trackingNumber && inspectOrder) {
+      setTrackingNumber(inspectOrder.shipment?.trackingNumber || `NV-JNE-${inspectOrder.orderNumber.replace(/[^0-9]/g, '')}`);
+    }
   };
 
   const handleSaveOrderStatus = async () => {
@@ -332,7 +339,7 @@ export const OrdersListPage: React.FC = () => {
                   <Select
                     label={t.orders.updateStatusLabel}
                     value={newStatus}
-                    onChange={(e) => setNewStatus(e.target.value)}
+                    onChange={(e) => handleStatusChange(e.target.value)}
                     options={[
                       { value: '', label: '— Select —' },
                       ...inspectOrder.allowedTransitions.map((s) => ({

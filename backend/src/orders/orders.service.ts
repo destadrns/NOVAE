@@ -96,6 +96,26 @@ export class OrdersService {
       paidAt: p.paidAt,
     }));
 
+    const shipment = order.shipment
+      ? {
+          id: order.shipment.id,
+          courier: order.shipment.courier,
+          service: order.shipment.service,
+          trackingNumber: order.shipment.trackingNumber,
+          status: order.shipment.status,
+          shippedAt: order.shipment.shippedAt,
+          deliveredAt: order.shipment.deliveredAt,
+        }
+      : null;
+
+    const statusHistory = (order.statusHistory || []).map((h: any) => ({
+      id: h.id,
+      fromStatus: h.fromStatus,
+      toStatus: h.toStatus,
+      note: h.note,
+      createdAt: h.createdAt,
+    }));
+
     return {
       id: order.id,
       orderNumber: order.orderNumber,
@@ -112,6 +132,8 @@ export class OrdersService {
       shippingAddress: order.shippingAddressSnapshot,
       items,
       payments: payments.length > 0 ? payments : undefined,
+      shipment,
+      statusHistory: statusHistory.length > 0 ? statusHistory : undefined,
       placedAt: order.placedAt,
       createdAt: order.createdAt,
     };
@@ -374,6 +396,8 @@ export class OrdersService {
             },
           },
           payments: true,
+          shipment: true,
+          statusHistory: { orderBy: { createdAt: 'asc' } },
         },
       });
     });
@@ -400,6 +424,8 @@ export class OrdersService {
           },
         },
         payments: true,
+        shipment: true,
+        statusHistory: { orderBy: { createdAt: 'asc' } },
       },
     });
 
@@ -431,6 +457,8 @@ export class OrdersService {
           },
         },
         payments: true,
+        shipment: true,
+        statusHistory: { orderBy: { createdAt: 'asc' } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -603,6 +631,8 @@ export class OrdersService {
             },
           },
           payments: true,
+          shipment: true,
+          statusHistory: { orderBy: { createdAt: 'asc' } },
         },
       });
     });
@@ -775,26 +805,28 @@ export class OrdersService {
         updateData.fulfillmentStatus = FulfillmentStatus.processing;
       } else if (targetStatus === OrderStatus.shipped) {
         updateData.fulfillmentStatus = FulfillmentStatus.processing;
-        if (trackingNumber) {
-          if (order.shipment) {
-            await tx.shipment.update({
-              where: { id: order.shipment.id },
-              data: {
-                trackingNumber,
-                status: ShipmentStatus.shipped,
-                shippedAt: new Date(),
-              },
-            });
-          } else {
-            await tx.shipment.create({
-              data: {
-                orderId: order.id,
-                trackingNumber,
-                status: ShipmentStatus.shipped,
-                shippedAt: new Date(),
-              },
-            });
-          }
+        const finalTracking = trackingNumber || `NV-JNE-${order.orderNumber.replace(/[^0-9]/g, '')}`;
+        if (order.shipment) {
+          await tx.shipment.update({
+            where: { id: order.shipment.id },
+            data: {
+              trackingNumber: finalTracking,
+              courier: order.shipment.courier || 'JNE Express',
+              status: ShipmentStatus.shipped,
+              shippedAt: new Date(),
+            },
+          });
+        } else {
+          await tx.shipment.create({
+            data: {
+              orderId: order.id,
+              trackingNumber: finalTracking,
+              courier: 'JNE Express',
+              service: 'REG',
+              status: ShipmentStatus.shipped,
+              shippedAt: new Date(),
+            },
+          });
         }
       } else if (targetStatus === OrderStatus.delivered) {
         updateData.fulfillmentStatus = FulfillmentStatus.fulfilled;

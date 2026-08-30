@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
@@ -20,29 +20,45 @@ import {
   Trash2,
   Clock,
   CreditCard,
+  Eye,
+  Truck,
+  Loader2,
 } from 'lucide-react';
 import { SimulatedPaymentModal } from '@/components/payment/SimulatedPaymentModal';
+import { CustomerOrderDetailModal } from '@/components/orders/CustomerOrderDetailModal';
 
 export const AccountPage: React.FC = () => {
   const { user, token, signOut } = useAuthStore();
   const { language } = useLanguageStore();
   const { wishlistIds, items: wishlistItems, fetchWishlist, toggleWishlist } = useWishlistStore();
   const [orders, setOrders] = useState<FrontendOrder[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [orderFilter, setOrderFilter] = useState<'ALL' | 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ALL');
   const [selectedPaymentOrder, setSelectedPaymentOrder] = useState<FrontendOrder | null>(null);
+  const [selectedDetailOrder, setSelectedDetailOrder] = useState<FrontendOrder | null>(null);
   const addItem = useCartStore((state) => state.addItem);
   const openCart = useUIStore((state) => state.openCart);
   const navigate = useNavigate();
 
   const isId = language === 'id';
 
+  const loadUserOrders = useCallback(async () => {
+    if (!token) return;
+    setIsLoadingOrders(true);
+    try {
+      const { data } = await apiGetUserOrders(token, language);
+      if (data) setOrders(data);
+    } finally {
+      setIsLoadingOrders(false);
+    }
+  }, [token, language]);
+
   useEffect(() => {
     if (token) {
       fetchWishlist(token, language);
-      apiGetUserOrders(token, language).then(({ data }) => {
-        if (data) setOrders(data);
-      });
+      loadUserOrders();
     }
-  }, [token, language, fetchWishlist]);
+  }, [token, language, fetchWishlist, loadUserOrders]);
 
   if (!user) {
     return null;
@@ -52,6 +68,16 @@ export const AccountPage: React.FC = () => {
     await signOut();
     navigate('/');
   };
+
+  // Filter orders by active tab
+  const filteredOrders = orders.filter((ord) => {
+    if (orderFilter === 'ALL') return true;
+    if (orderFilter === 'PENDING') return ord.status === 'pending' || ord.paymentStatus === 'failed';
+    if (orderFilter === 'ACTIVE') return ord.status === 'paid' || ord.status === 'processing' || ord.status === 'shipped';
+    if (orderFilter === 'COMPLETED') return ord.status === 'delivered';
+    if (orderFilter === 'CANCELLED') return ord.status === 'cancelled';
+    return true;
+  });
 
   // Resolve products from static mock list or API items
   const savedGarments = wishlistIds.map((id) => {
@@ -137,8 +163,8 @@ export const AccountPage: React.FC = () => {
         </div>
 
         {/* Orders Card */}
-        <div className="md:col-span-2 p-6 bg-charcoal border border-white/10 rounded-sm space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="md:col-span-2 p-6 bg-charcoal border border-white/10 rounded-sm space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
             <div className="flex items-center gap-2 text-bone text-sm font-mono font-bold uppercase tracking-wider">
               <Package className="w-4 h-4 text-accent-lime" />
               <span>{isId ? 'Riwayat Pesanan' : 'Order History'}</span>
@@ -146,14 +172,43 @@ export const AccountPage: React.FC = () => {
             </div>
             <button
               onClick={() => navigate('/shop')}
-              className="text-xs font-mono text-accent-lime hover:underline flex items-center gap-1"
+              className="text-xs font-mono text-accent-lime hover:underline flex items-center gap-1 self-start sm:self-auto"
             >
               <span>{isId ? 'Jelajahi Koleksi' : 'Explore Catalog'}</span>
               <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
-          {orders.length === 0 ? (
+          {/* Filter Tabs */}
+          {orders.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] font-mono">
+              {[
+                { id: 'ALL', label: isId ? 'Semua' : 'All' },
+                { id: 'PENDING', label: isId ? 'Perlu Bayar' : 'Unpaid' },
+                { id: 'ACTIVE', label: isId ? 'Diproses / Dikirim' : 'Active' },
+                { id: 'COMPLETED', label: isId ? 'Selesai' : 'Completed' },
+                { id: 'CANCELLED', label: isId ? 'Dibatalkan' : 'Cancelled' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setOrderFilter(tab.id as any)}
+                  className={`px-3 py-1.5 rounded-sm uppercase tracking-wider transition-colors whitespace-nowrap ${
+                    orderFilter === tab.id
+                      ? 'bg-accent-lime text-obsidian font-bold'
+                      : 'bg-white/5 hover:bg-white/10 text-muted-light border border-white/10'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {isLoadingOrders ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="w-5 h-5 text-accent-lime animate-spin" />
+            </div>
+          ) : orders.length === 0 ? (
             <div className="p-8 border border-dashed border-white/10 rounded-sm text-center space-y-2 bg-obsidian/40">
               <p className="text-xs font-mono text-muted-light">
                 {isId
@@ -161,52 +216,135 @@ export const AccountPage: React.FC = () => {
                   : 'No active orders yet. Your confirmed atelier orders will appear here.'}
               </p>
             </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="p-6 border border-dashed border-white/10 rounded-sm text-center space-y-1 bg-obsidian/40 text-xs font-mono text-muted-light">
+              <p>{isId ? 'Tidak ada pesanan pada kategori ini.' : 'No orders matching this filter.'}</p>
+            </div>
           ) : (
-            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-              {orders.map((ord) => (
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+              {filteredOrders.map((ord) => (
                 <div
                   key={ord.id}
-                  className="p-3 bg-obsidian/60 border border-white/10 rounded-sm flex items-center justify-between gap-3 text-xs font-mono"
+                  className="p-4 bg-obsidian/60 border border-white/10 rounded-sm space-y-3 text-xs font-mono hover:border-white/20 transition-all"
                 >
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-bone">{ord.orderNumber}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-lime/10 text-accent-lime uppercase border border-accent-lime/20">
+                  {/* Card Top Row: Order Number & Badges */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-2.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-sm text-bone">{ord.orderNumber}</span>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-sm uppercase font-bold border ${
+                          ord.status === 'delivered' || ord.status === 'paid'
+                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                            : ord.status === 'cancelled'
+                            ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+                            : 'bg-accent-lime/10 text-accent-lime border-accent-lime/30'
+                        }`}
+                      >
                         {ord.status}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] text-muted-light">
-                      <Clock className="w-3 h-3 text-muted" />
-                      <span>{new Date(ord.createdAt).toLocaleDateString(isId ? 'id-ID' : 'en-US')}</span>
-                      <span>•</span>
-                      <span>{ord.items.length} items</span>
+
+                    <div className="flex items-center gap-2 text-[11px] text-muted-light">
+                      <Clock className="w-3.5 h-3.5 text-muted" />
+                      <span>
+                        {new Date(ord.placedAt || ord.createdAt).toLocaleDateString(isId ? 'id-ID' : 'en-US', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                    <span className="text-accent-lime font-bold block">{formatIDR(ord.totalIdr)}</span>
-                    <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded uppercase border block font-bold ${
-                        ord.paymentStatus === 'paid'
-                          ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                          : ord.paymentStatus === 'failed'
-                          ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
-                          : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-                      }`}
-                    >
-                      {ord.paymentStatus}
-                    </span>
+                  {/* Card Middle Row: Items Preview & Shipment */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    {/* Item Thumbnails & Descriptions */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex -space-x-2 shrink-0">
+                        {ord.items.slice(0, 3).map((item, idx) => (
+                          <div
+                            key={item.id || idx}
+                            className="w-10 h-12 rounded-sm border border-white/10 bg-charcoal overflow-hidden shrink-0 shadow-md"
+                          >
+                            {item.imageUrl ? (
+                              <img src={item.imageUrl} alt={item.productName} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-white/5">
+                                <Package className="w-3 h-3 text-muted" />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
 
-                    {ord.status === 'pending' && (
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="font-bold text-bone truncate text-xs">
+                          {ord.items[0]?.productName || 'NOVAÉ Garment'}
+                          {ord.items.length > 1 && (
+                            <span className="text-muted-light font-normal text-[11px] ml-1">
+                              (+{ord.items.length - 1} {isId ? 'lainnya' : 'more'})
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-muted-light">
+                          {ord.items.reduce((s, i) => s + i.quantity, 0)} {isId ? 'potong busana' : 'pieces total'}
+                        </div>
+                        {ord.shipment?.trackingNumber && (
+                          <div className="text-[10px] text-cyan-400 flex items-center gap-1 pt-0.5">
+                            <Truck className="w-3 h-3" />
+                            <span>Resi: {ord.shipment.trackingNumber}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Financial Total */}
+                    <div className="text-left sm:text-right shrink-0">
+                      <span className="text-[10px] text-muted block uppercase">{isId ? 'Total Pesanan' : 'Total Settled'}</span>
+                      <span className="text-sm font-bold text-accent-lime block">{formatIDR(ord.totalIdr)}</span>
+                    </div>
+                  </div>
+
+                  {/* Card Bottom Actions */}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted uppercase">Pembayaran:</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded-sm uppercase font-bold border ${
+                          ord.paymentStatus === 'paid'
+                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                            : ord.paymentStatus === 'failed'
+                            ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+                            : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                        }`}
+                      >
+                        {ord.paymentStatus}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {/* View Details Button */}
                       <button
                         type="button"
-                        onClick={() => setSelectedPaymentOrder(ord)}
-                        className="mt-1 px-2.5 py-1 rounded-sm bg-accent-lime/20 hover:bg-accent-lime text-accent-lime hover:text-obsidian text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1 transition-colors border border-accent-lime/40"
+                        onClick={() => setSelectedDetailOrder(ord)}
+                        className="px-3 py-1.5 rounded-sm bg-white/5 hover:bg-white/10 text-bone hover:text-white border border-white/10 text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors"
                       >
-                        <CreditCard className="w-3 h-3" />
-                        <span>{isId ? 'Bayar / Simulasi' : 'Pay / Simulate'}</span>
+                        <Eye className="w-3.5 h-3.5 text-muted-light" />
+                        <span>{isId ? 'Detail Pesanan' : 'Order Detail'}</span>
                       </button>
-                    )}
+
+                      {/* Pay / Simulate Button for Pending */}
+                      {(ord.status === 'pending' || ord.paymentStatus === 'failed') && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPaymentOrder(ord)}
+                          className="px-3 py-1.5 rounded-sm bg-accent-lime hover:bg-accent-lime/90 text-obsidian text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow-sm"
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                          <span>{isId ? 'Bayar / Simulasi' : 'Pay / Simulate'}</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -332,6 +470,18 @@ export const AccountPage: React.FC = () => {
         <span className="text-[10px] text-muted-light/60">NOVAÉ ATELIER v1.2</span>
       </div>
 
+      {/* Customer Order Detail Modal */}
+      <CustomerOrderDetailModal
+        isOpen={!!selectedDetailOrder}
+        onClose={() => setSelectedDetailOrder(null)}
+        order={selectedDetailOrder}
+        onPaySimulate={(ord) => {
+          setSelectedDetailOrder(null);
+          setSelectedPaymentOrder(ord);
+        }}
+        isId={isId}
+      />
+
       {/* Simulated Payment Modal */}
       <SimulatedPaymentModal
         isOpen={!!selectedPaymentOrder}
@@ -339,6 +489,9 @@ export const AccountPage: React.FC = () => {
         order={selectedPaymentOrder}
         onPaymentUpdated={(updated) => {
           setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+          if (selectedDetailOrder?.id === updated.id) {
+            setSelectedDetailOrder(updated);
+          }
           setSelectedPaymentOrder(updated);
         }}
       />

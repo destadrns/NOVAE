@@ -275,6 +275,24 @@ export interface FrontendOrderItem {
   imageUrl?: string | null;
 }
 
+export interface FrontendShipment {
+  id: string;
+  courier?: string | null;
+  service?: string | null;
+  trackingNumber?: string | null;
+  status: string;
+  shippedAt?: string | null;
+  deliveredAt?: string | null;
+}
+
+export interface FrontendOrderStatusHistory {
+  id: string;
+  fromStatus?: string | null;
+  toStatus: string;
+  note?: string | null;
+  createdAt: string;
+}
+
 export interface FrontendOrder {
   id: string;
   orderNumber: string;
@@ -291,6 +309,8 @@ export interface FrontendOrder {
   shippingAddress: any;
   items: FrontendOrderItem[];
   payments?: FrontendPayment[];
+  shipment?: FrontendShipment | null;
+  statusHistory?: FrontendOrderStatusHistory[];
   placedAt?: string | null;
   createdAt: string;
 }

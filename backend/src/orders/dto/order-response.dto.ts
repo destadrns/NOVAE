@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { OrderStatus, PaymentStatus, FulfillmentStatus } from '@prisma/client';
+import { OrderStatus, PaymentStatus, FulfillmentStatus, ShipmentStatus } from '@prisma/client';
 
 export class OrderItemResponseDto {
   @ApiProperty({ description: 'Order item unique identifier' })
@@ -56,6 +56,46 @@ export class PaymentResponseDto {
   paidAt?: Date | null;
 }
 
+export class ShipmentResponseDto {
+  @ApiProperty({ description: 'Shipment UUID' })
+  id: string;
+
+  @ApiPropertyOptional({ description: 'Logistics courier name', example: 'JNE Express' })
+  courier?: string | null;
+
+  @ApiPropertyOptional({ description: 'Courier service tier', example: 'REG' })
+  service?: string | null;
+
+  @ApiPropertyOptional({ description: 'Waybill tracking number', example: 'NV-EXP-0109-8821' })
+  trackingNumber?: string | null;
+
+  @ApiProperty({ enum: ShipmentStatus, description: 'Current shipment tracking status' })
+  status: ShipmentStatus;
+
+  @ApiPropertyOptional({ description: 'Timestamp when package was dispatched' })
+  shippedAt?: Date | null;
+
+  @ApiPropertyOptional({ description: 'Timestamp when package was delivered' })
+  deliveredAt?: Date | null;
+}
+
+export class OrderStatusHistoryResponseDto {
+  @ApiProperty({ description: 'History record UUID' })
+  id: string;
+
+  @ApiPropertyOptional({ enum: OrderStatus, description: 'Previous order status' })
+  fromStatus?: OrderStatus | null;
+
+  @ApiProperty({ enum: OrderStatus, description: 'New order status' })
+  toStatus: OrderStatus;
+
+  @ApiPropertyOptional({ description: 'Audit trail or transition note' })
+  note?: string | null;
+
+  @ApiProperty({ description: 'Timestamp of status transition' })
+  createdAt: Date;
+}
+
 export class OrderResponseDto {
   @ApiProperty({ description: 'Order UUID' })
   id: string;
@@ -101,6 +141,12 @@ export class OrderResponseDto {
 
   @ApiPropertyOptional({ description: 'Payment records and status', type: () => [PaymentResponseDto] })
   payments?: PaymentResponseDto[];
+
+  @ApiPropertyOptional({ description: 'Shipment and tracking details', type: () => ShipmentResponseDto })
+  shipment?: ShipmentResponseDto | null;
+
+  @ApiPropertyOptional({ description: 'Historical status transition timeline', type: () => [OrderStatusHistoryResponseDto] })
+  statusHistory?: OrderStatusHistoryResponseDto[];
 
   @ApiProperty({ description: 'Timestamp when order was placed' })
   placedAt: Date | null;
