@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
-import { X, Mail, Lock, User, LogOut, ArrowRight, ShieldCheck } from 'lucide-react';
+import { X, Mail, Lock, User, LogOut, ArrowRight, ShieldCheck, ShoppingBag } from 'lucide-react';
 
 export const AuthModal: React.FC = () => {
   const {
     isAuthModalOpen,
     closeAuthModal,
     authModalMode,
+    authModalReason,
     openAuthModal,
     user,
     isAuthenticated,
@@ -106,6 +107,19 @@ export const AuthModal: React.FC = () => {
         ) : (
           /* Sign In / Sign Up View */
           <div className="space-y-5">
+            {/* Exclusive Access Reason Banner */}
+            {authModalReason && (
+              <div className="p-3.5 bg-accent-lime/10 border border-accent-lime/30 rounded-sm flex items-start gap-3 text-xs text-bone">
+                <ShoppingBag className="w-4 h-4 text-accent-lime shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-accent-lime block font-bold">
+                    {isId ? 'AKSES EKSKLUSIF ATELIER' : 'ATELIER ACCESS REQUIRED'}
+                  </span>
+                  <p className="text-bone-soft text-xs leading-relaxed">{authModalReason}</p>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col items-center text-center space-y-1">
               <div className="w-8 h-8 rounded-sm bg-accent-lime text-obsidian flex items-center justify-center font-bold text-xs tracking-tighter">
                 NÉ
@@ -116,7 +130,7 @@ export const AuthModal: React.FC = () => {
                   : isId ? 'BUAT AKUN ATELIER' : 'CREATE ATELIER ACCOUNT'}
               </h2>
               <p className="text-[11px] font-sans text-muted-light">
-                {isId ? 'Akses eksklusif koleksi dan riwayat pesanan' : 'Exclusive access to collections & orders'}
+                {isId ? 'Akses eksklusif koleksi dan alokasi pesanan' : 'Exclusive access to collections & orders'}
               </p>
             </div>
 

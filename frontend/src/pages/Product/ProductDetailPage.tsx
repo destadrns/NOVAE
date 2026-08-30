@@ -34,9 +34,9 @@ export const ProductDetailPage: React.FC = () => {
   const addItem = useCartStore((state) => state.addItem);
   const openCart = useUIStore((state) => state.openCart);
   const { toggleWishlist, isInWishlist } = useWishlistStore();
-  const token = useAuthStore((state) => state.token);
+  const { token, isAuthenticated, openAuthModal } = useAuthStore();
 
-  // Fetch live product from API
+  // Fetch live product details from API
   useEffect(() => {
     let isMounted = true;
     if (slug) {
@@ -58,7 +58,7 @@ export const ProductDetailPage: React.FC = () => {
     };
   }, [slug, language]);
 
-  // Reset local state ONLY when slug changes
+  // Reset local image/state when slug changes
   useEffect(() => {
     setSelectedImage(0);
     setIsAdding(false);
@@ -76,9 +76,19 @@ export const ProductDetailPage: React.FC = () => {
     : product.price;
 
   const isFavorited = isInWishlist(product.id);
-  const relatedProducts = PRODUCTS.filter((p) => p.id !== product.id).slice(0, 3).map(getLocalizedProduct);
+  const relatedProducts = storeProducts.filter((p) => p.id !== product.id).slice(0, 3).map(getLocalizedProduct);
 
   const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      openAuthModal(
+        'signin',
+        language === 'id'
+          ? 'Silakan masuk ke akun NOVAÉ Anda untuk menambahkan item ini ke tas belanja dan mengamankan alokasi stok eksklusif.'
+          : 'Please sign in to your NOVAÉ account to add this item to your shopping bag and secure limited stock allocation.'
+      );
+      return;
+    }
+
     setIsAdding(true);
     setTimeout(() => {
       addItem(rawProduct, selectedColor, selectedSize, 1, token);

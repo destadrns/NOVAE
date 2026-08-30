@@ -32,15 +32,26 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   const addItem = useCartStore((state) => state.addItem);
   const { toggleWishlist, isInWishlist } = useWishlistStore();
-  const token = useAuthStore((state) => state.token);
+  const { token, isAuthenticated, openAuthModal } = useAuthStore();
   const openCart = useUIStore((state) => state.openCart);
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   const isFavorited = isInWishlist(product.id);
 
   const handleQuickAdd = (e: React.MouseEvent, sizeChoice?: string) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (!isAuthenticated) {
+      openAuthModal(
+        'signin',
+        language === 'id'
+          ? 'Silakan masuk ke akun NOVAÉ Anda untuk menambahkan item ini ke tas belanja dan mengamankan alokasi stok eksklusif.'
+          : 'Please sign in to your NOVAÉ account to add this item to your shopping bag and secure limited stock allocation.'
+      );
+      return;
+    }
+
     const chosenSize = sizeChoice || selectedSize || product.sizes[0] || 'M';
     addItem(product, activeColor, chosenSize, 1, token);
     setAddedNotice(true);
