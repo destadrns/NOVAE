@@ -367,13 +367,35 @@ export class AdminCatalogService {
         updateData.category = { connect: { id: dto.categoryId } };
       }
       if (dto.collectionId !== undefined) {
-        updateData.collection = dto.collectionId ? { connect: { id: dto.collectionId } } : { disconnect: true };
+        if (dto.collectionId) {
+          updateData.collection = { connect: { id: dto.collectionId } };
+        } else if (product.collectionId) {
+          updateData.collection = { disconnect: true };
+        }
       }
 
       const updated = await tx.product.update({
         where: { id },
         data: updateData,
       });
+
+      // Update gallery images if provided
+      if (dto.images && dto.images.length > 0) {
+        await tx.productImage.deleteMany({ where: { productId: id } });
+        for (let i = 0; i < dto.images.length; i++) {
+          const img = dto.images[i];
+          if (!img.imageUrl) continue;
+          await tx.productImage.create({
+            data: {
+              productId: id,
+              imageUrl: img.imageUrl,
+              altText: img.altText || null,
+              sortOrder: img.sortOrder !== undefined ? img.sortOrder : i,
+              isPrimary: img.isPrimary || false,
+            },
+          });
+        }
+      }
 
       // Update translations
       if (dto.translations) {
