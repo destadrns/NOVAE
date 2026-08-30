@@ -2,17 +2,58 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Sparkles, Compass, Eye } from 'lucide-react';
-import { COLLECTIONS } from '@/data/collections';
+import { COLLECTIONS, Collection } from '@/data/collections';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useLanguageStore } from '@/store/useLanguageStore';
+import { apiGetCollections } from '@/lib/api';
 
 gsap.registerPlugin(ScrollTrigger);
 
 export const CollectionsShowcase: React.FC = () => {
   const [activeTab, setActiveTab] = useState<number>(0);
   const { t, getLocalizedCollection } = useTranslation();
-  const rawCollection = COLLECTIONS[activeTab];
+  const { language } = useLanguageStore();
+  const [liveCollections, setLiveCollections] = useState<Collection[]>(COLLECTIONS);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiGetCollections(language).then(({ data }) => {
+      if (isMounted && data && Array.isArray(data) && data.length > 0) {
+        const mappedCols: Collection[] = data.map((c) => {
+          const fallback = COLLECTIONS.find(
+            (fc) =>
+              fc.id.toLowerCase() === c.slug.toLowerCase() ||
+              fc.code.toLowerCase() === c.code.toLowerCase() ||
+              fc.name.toLowerCase() === c.name.toLowerCase(),
+          );
+          return {
+            id: c.slug || c.id,
+            code: c.code || fallback?.code || '01',
+            name: c.name || fallback?.name || c.code,
+            description: c.description || fallback?.description || '',
+            tagline: fallback?.tagline || 'Crafted series.',
+            accentQuote: fallback?.accentQuote || 'Define your own form.',
+            heroImage: c.coverImageUrl || fallback?.heroImage || 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=800',
+            detailImage: fallback?.detailImage || 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=800',
+            productCount: fallback?.productCount || 6,
+            featuredSlug: fallback?.featuredSlug || 'oversized-form-jacket',
+            materialSpec: fallback?.materialSpec || 'Curated Atelier Materials',
+            silhouetteSpec: fallback?.silhouetteSpec || 'Sculptural Tailoring',
+            paletteSpec: fallback?.paletteSpec || 'Obsidian • Raw Stone • Slate',
+            location: fallback?.location || 'ATELIER NOVAE // ARCHIVE',
+          };
+        });
+        setLiveCollections(mappedCols);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [language]);
+
+  const rawCollection = liveCollections[activeTab] || liveCollections[0] || COLLECTIONS[0];
   const currentCollection = getLocalizedCollection(rawCollection);
 
   const sectionRef = useRef<HTMLDivElement>(null);

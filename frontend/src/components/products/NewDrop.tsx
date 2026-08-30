@@ -1,15 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Sparkles } from 'lucide-react';
-import { PRODUCTS } from '@/data/products';
+import { PRODUCTS, Product } from '@/data/products';
 import { ProductCard } from './ProductCard';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useLanguageStore } from '@/store/useLanguageStore';
+import { apiGetProducts, mapApiProductToFrontend } from '@/lib/api';
 
 export const NewDrop: React.FC = () => {
   const { t, getLocalizedProduct } = useTranslation();
-  const rawNewArrivals = PRODUCTS.filter((p) => p.newArrival || p.featured).slice(0, 4);
+  const { language } = useLanguageStore();
+  const [liveProducts, setLiveProducts] = useState<Product[]>(PRODUCTS);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiGetProducts({ lang: language }).then(({ data }) => {
+      if (isMounted && data && Array.isArray(data.items) && data.items.length > 0) {
+        setLiveProducts(data.items.map(mapApiProductToFrontend));
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [language]);
+
+  const rawNewArrivals = liveProducts.filter((p) => p.newArrival || p.featured).slice(0, 4);
   const newArrivals = rawNewArrivals.map(getLocalizedProduct);
-  const heroProduct = newArrivals[0];
+  const heroProduct = newArrivals[0] || liveProducts[0];
   const supportingProducts = newArrivals.slice(1, 4);
 
   return (

@@ -158,37 +158,39 @@ export const useTranslation = () => {
   const t = translations[language];
 
   const getLocalizedProduct = (product: Product): Product => {
+    if (!product) return product;
     if (language === 'en') return product;
     const loc = PRODUCT_LOCALIZATIONS[product.id]?.id;
     if (!loc) return product;
 
     return {
       ...product,
-      tagline: loc.tagline || product.tagline,
-      description: loc.description || product.description,
+      tagline: product.tagline || loc.tagline,
+      description: product.description || loc.description,
       details: {
         ...product.details,
-        material: loc.material || product.details.material,
-        fit: loc.fit || product.details.fit,
-        care: loc.care || product.details.care,
-        origin: loc.origin || product.details.origin,
-      }
+        material: product.details?.material || loc.material,
+        fit: product.details?.fit || loc.fit,
+        care: product.details?.care || loc.care,
+        origin: product.details?.origin || loc.origin,
+      },
     };
   };
 
   const getLocalizedCollection = (collection: Collection): Collection => {
+    if (!collection) return collection;
     if (language === 'en') return collection;
     const loc = COLLECTION_LOCALIZATIONS[collection.id]?.id;
     if (!loc) return collection;
 
     return {
       ...collection,
-      tagline: loc.tagline || collection.tagline,
-      description: loc.description || collection.description,
-      accentQuote: loc.accentQuote || collection.accentQuote,
-      materialSpec: loc.materialSpec || collection.materialSpec,
-      silhouetteSpec: loc.silhouetteSpec || collection.silhouetteSpec,
-      paletteSpec: loc.paletteSpec || collection.paletteSpec,
+      tagline: collection.tagline || loc.tagline,
+      description: collection.description || loc.description,
+      accentQuote: collection.accentQuote || loc.accentQuote,
+      materialSpec: collection.materialSpec || loc.materialSpec,
+      silhouetteSpec: collection.silhouetteSpec || loc.silhouetteSpec,
+      paletteSpec: collection.paletteSpec || loc.paletteSpec,
     };
   };
 
