@@ -11,9 +11,34 @@ interface CatalogState {
   fetchCatalog: (language: string) => Promise<void>;
 }
 
+const CACHE_KEY = 'novae_catalog_cache_v2';
+
+const loadCached = (): { collections: Collection[]; products: Product[] } => {
+  if (typeof window === 'undefined') {
+    return { collections: COLLECTIONS, products: PRODUCTS };
+  }
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.collections) && parsed.collections.length > 0) {
+        return {
+          collections: parsed.collections,
+          products: Array.isArray(parsed.products) && parsed.products.length > 0 ? parsed.products : PRODUCTS,
+        };
+      }
+    }
+  } catch {
+    // Ignore parse error
+  }
+  return { collections: COLLECTIONS, products: PRODUCTS };
+};
+
+const initialCached = loadCached();
+
 export const useCatalogStore = create<CatalogState>((set, get) => ({
-  collections: COLLECTIONS,
-  products: PRODUCTS,
+  collections: initialCached.collections,
+  products: initialCached.products,
   isLoading: true,
   isInitialized: false,
 
@@ -41,7 +66,7 @@ export const useCatalogStore = create<CatalogState>((set, get) => ({
           );
           return {
             id: c.slug || c.id,
-            code: c.code || fallback?.code || '01',
+            code: c.code || fallback?.code || 'FORM',
             name: c.name || fallback?.name || c.code,
             description: c.description || fallback?.description || '',
             tagline: fallback?.tagline || 'Crafted series.',
@@ -68,6 +93,20 @@ export const useCatalogStore = create<CatalogState>((set, get) => ({
 
       if (rawProdList && rawProdList.length > 0) {
         stateUpdate.products = rawProdList.map(mapApiProductToFrontend);
+      }
+
+      if (typeof window !== 'undefined' && stateUpdate.collections && stateUpdate.products) {
+        try {
+          localStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({
+              collections: stateUpdate.collections,
+              products: stateUpdate.products,
+            }),
+          );
+        } catch {
+          // Ignore write error
+        }
       }
 
       set(stateUpdate as any);

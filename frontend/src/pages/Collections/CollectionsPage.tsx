@@ -22,6 +22,14 @@ export const CollectionsPage: React.FC = () => {
 
   const selectedCol = rawSelectedCol ? getLocalizedCollection(rawSelectedCol) : null;
 
+  const headerTitle = selectedCol
+    ? selectedCol.name.toLowerCase().startsWith('series')
+      ? selectedCol.name
+      : selectedCol.name.toLowerCase() === selectedCol.code.toLowerCase()
+      ? `SERIES ${selectedCol.name}`
+      : `SERIES ${selectedCol.code} — ${selectedCol.name}`
+    : t.collectionsPage.threePillars;
+
   return (
     <div className="pt-28 pb-32 bg-obsidian text-bone min-h-screen">
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
@@ -31,7 +39,7 @@ export const CollectionsPage: React.FC = () => {
             {t.collectionsPage.archiveLabel}
           </span>
           <h1 className="text-4xl sm:text-6xl font-display font-extrabold tracking-tight uppercase">
-            {selectedCol ? `SERIES ${selectedCol.code} — ${selectedCol.name}` : t.collectionsPage.threePillars}
+            {headerTitle}
           </h1>
           <p className="text-sm text-muted-light mt-2 max-w-xl font-light">
             {selectedCol

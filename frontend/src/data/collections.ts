@@ -18,7 +18,7 @@ export interface Collection {
 export const COLLECTIONS: Collection[] = [
   {
     id: 'form',
-    code: '01',
+    code: 'FORM',
     name: 'FORM',
     tagline: 'Structured silhouettes.',
     description: 'An architectural exploration of volume, strict clean geometries, and deliberate drape. Tailored with heavyweight double-face wools and high-density twills.',
@@ -34,7 +34,7 @@ export const COLLECTIONS: Collection[] = [
   },
   {
     id: 'motion',
-    code: '02',
+    code: 'MOTION',
     name: 'MOTION',
     tagline: 'Designed for movement.',
     description: 'Fluidity in kinetic cadence. Fabrics selected for their dynamic flow in air, natural folds during stride, and effortless transition across environments.',
@@ -50,7 +50,7 @@ export const COLLECTIONS: Collection[] = [
   },
   {
     id: 'identity',
-    code: '03',
+    code: 'IDENTITY',
     name: 'IDENTITY',
     tagline: 'Made to express.',
     description: 'Raw edge details, modular fastenings, and unconventional proportions. Pieces that stand outside seasonal trend cycles to articulate personal presence.',
