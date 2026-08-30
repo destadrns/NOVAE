@@ -518,6 +518,46 @@ export async function adminUpdateOrderStatus(
 }
 
 // ================================================================
+// CUSTOMERS MANAGEMENT (Admin)
+// ================================================================
+
+export interface BackendAdminCustomer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  city: string;
+  address: string;
+  styleArchetype: string;
+  ordersCount: number;
+  lifetimeSpend: number;
+  status: string;
+  memberSince: string;
+}
+
+export async function adminGetCustomers(
+  token: string | null,
+  params?: { search?: string; page?: number; limit?: number },
+) {
+  const query = new URLSearchParams();
+  if (params?.search) query.append('search', params.search);
+  if (params?.page) query.append('page', String(params.page));
+  if (params?.limit) query.append('limit', String(params.limit));
+
+  const qs = query.toString() ? `?${query.toString()}` : '';
+  return fetchWithAuth<{
+    data: BackendAdminCustomer[];
+    meta: { page: number; limit: number; totalItems: number; totalPages: number };
+  }>(`/admin/customers${qs}`, token);
+}
+
+export async function adminDeleteCustomer(token: string | null, id: string) {
+  return fetchWithAuth<{ message: string; id: string }>(`/admin/customers/${id}`, token, {
+    method: 'DELETE',
+  });
+}
+
+// ================================================================
 // JOURNAL CMS (Admin)
 // ================================================================
 

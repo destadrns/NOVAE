@@ -172,4 +172,155 @@ export class AuthService {
 
     return user;
   }
+
+  /**
+   * List all customer users with address, order counts, and spend
+   */
+  async getAdminCustomers(query: { search?: string; page?: number; limit?: number }) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      role: UserRole.customer,
+    };
+
+    if (query.search) {
+      const term = query.search.trim();
+      where.OR = [
+        { fullName: { contains: term, mode: 'insensitive' } },
+        { email: { contains: term, mode: 'insensitive' } },
+      ];
+    }
+
+    const [totalItems, users] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          addresses: {
+            take: 1,
+            orderBy: { isDefault: 'desc' },
+          },
+          orders: {
+            include: {
+              payments: true,
+            },
+          },
+          styleProfiles: {
+            take: 1,
+          },
+        },
+      }),
+    ]);
+
+    const data = users.map((u) => {
+      const addr = u.addresses[0];
+      const ordersCount = u.orders.length;
+      const lifetimeSpend = u.orders.reduce((sum, ord) => {
+        const isPaid =
+          ord.paymentStatus === 'paid' ||
+          ord.status === 'paid' ||
+          ord.status === 'processing' ||
+          ord.status === 'shipped' ||
+          ord.status === 'delivered';
+        return isPaid ? sum + Number(ord.totalIdr) : sum;
+      }, 0);
+
+      const archetype = u.styleProfiles[0]?.archetypeCode || 'Form Minimalist';
+
+      return {
+        id: u.id,
+        name: u.fullName,
+        email: u.email,
+        phone: addr?.phone || '—',
+        city: addr?.city || 'Bandung',
+        address: addr?.addressLine1 || '—',
+        styleArchetype: archetype,
+        ordersCount,
+        lifetimeSpend,
+        status: u.status,
+        memberSince: u.createdAt,
+      };
+    });
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      },
+    };
+  }
+
+  /**
+   * Delete customer account
+   */
+  async deleteCustomer(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { orders: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException(`Customer with ID '${id}' not found`);
+    }
+
+    if (user.role === UserRole.admin) {
+      throw new UnauthorizedException('Cannot delete administrator account');
+    }
+
+    // Cascade delete customer data
+    await this.prisma.$transaction(async (tx) => {
+      await tx.cartItem.deleteMany({
+        where: { cart: { userId: id } },
+      });
+      await tx.cart.deleteMany({
+        where: { userId: id },
+      });
+      await tx.wishlistItem.deleteMany({
+        where: { wishlist: { userId: id } },
+      });
+      await tx.wishlist.deleteMany({
+        where: { userId: id },
+      });
+      await tx.styleProfile.deleteMany({
+        where: { userId: id },
+      });
+      await tx.address.deleteMany({
+        where: { userId: id },
+      });
+      await tx.userPreference.deleteMany({
+        where: { userId: id },
+      });
+      await tx.analyticsEvent.deleteMany({
+        where: { userId: id },
+      });
+      await tx.orderStatusHistory.deleteMany({
+        where: { changedBy: id },
+      });
+      await tx.orderItem.deleteMany({
+        where: { order: { userId: id } },
+      });
+      await tx.payment.deleteMany({
+        where: { order: { userId: id } },
+      });
+      await tx.shipment.deleteMany({
+        where: { order: { userId: id } },
+      });
+      await tx.order.deleteMany({
+        where: { userId: id },
+      });
+      await tx.user.delete({
+        where: { id },
+      });
+    });
+
+    return { message: 'Customer successfully deleted', id };
+  }
 }

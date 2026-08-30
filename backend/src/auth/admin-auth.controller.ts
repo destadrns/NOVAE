@@ -1,17 +1,20 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Delete, Param, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from './guards/supabase-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { UserRole, User } from '@prisma/client';
 import { UserProfileDto, AdminOverviewDto } from './dto/auth.dto';
+import { AuthService } from './auth.service';
 
 @ApiTags('Admin Operations (Protected)')
 @ApiBearerAuth()
 @Controller('admin')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 export class AdminAuthController {
+  constructor(private readonly authService: AuthService) {}
+
   @Get('me')
   @Roles(UserRole.admin)
   @ApiOperation({
@@ -22,14 +25,6 @@ export class AdminAuthController {
     status: 200,
     description: 'Admin identity confirmed',
     type: UserProfileDto,
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized: Missing or invalid token',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden: User is not an admin',
   })
   async getAdminMe(@CurrentUser() user: User & { preferences?: any }): Promise<UserProfileDto> {
     return {
@@ -42,6 +37,33 @@ export class AdminAuthController {
       preferences: user.preferences,
       createdAt: user.createdAt,
     };
+  }
+
+  @Get('customers')
+  @Roles(UserRole.admin)
+  @ApiOperation({
+    summary: 'List all registered customer accounts with order counts and spend',
+  })
+  async getCustomers(
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.authService.getAdminCustomers({
+      search,
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
+  }
+
+  @Delete('customers/:id')
+  @Roles(UserRole.admin)
+  @ApiOperation({
+    summary: 'Delete customer profile and associated carts/wishlists',
+  })
+  @ApiParam({ name: 'id', description: 'Customer User UUID' })
+  async deleteCustomer(@Param('id') id: string) {
+    return this.authService.deleteCustomer(id);
   }
 
   @Get('overview')
