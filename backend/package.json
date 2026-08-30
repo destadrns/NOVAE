@@ -4,7 +4,8 @@
   "private": true,
   "description": "NOVAÉ Backend — NestJS Foundation & Prisma",
   "scripts": {
-    "build": "nest build",
+    "build": "prisma generate && nest build",
+    "vercel-build": "prisma generate && nest build",
     "start": "nest start",
     "dev": "nest start --watch",
     "start:dev": "nest start --watch",
