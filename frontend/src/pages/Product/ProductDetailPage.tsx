@@ -1,19 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Heart, ShoppingBag, Check, ShieldCheck, Truck, RefreshCw, ArrowLeft } from 'lucide-react';
-import { PRODUCTS } from '@/data/products';
+import { PRODUCTS, Product } from '@/data/products';
 import { formatIDR } from '@/lib/formatters';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useLanguageStore } from '@/store/useLanguageStore';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useTranslation } from '@/i18n/useTranslation';
+import { apiGetProductBySlug, mapApiProductToFrontend } from '@/lib/api';
 
 export const ProductDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
-  const rawProduct = PRODUCTS.find((p) => p.slug === slug) || PRODUCTS[0];
+  const fallbackProduct = PRODUCTS.find((p) => p.slug === slug) || PRODUCTS[0];
+  const [rawProduct, setRawProduct] = useState<Product>(fallbackProduct);
   const { t, getLocalizedProduct } = useTranslation();
+  const { language } = useLanguageStore();
   const product = getLocalizedProduct(rawProduct);
 
   const [selectedImage, setSelectedImage] = useState<number>(0);
@@ -27,14 +31,44 @@ export const ProductDetailPage: React.FC = () => {
   const { toggleWishlist, isInWishlist } = useWishlistStore();
   const token = useAuthStore((state) => state.token);
 
-  // Reset local state when navigating to a different product
+  // Fetch live product from API
+  useEffect(() => {
+    let isMounted = true;
+    if (slug) {
+      apiGetProductBySlug(slug, language).then(({ data }) => {
+        if (isMounted && data) {
+          const mapped = mapApiProductToFrontend(data);
+          setRawProduct(mapped);
+          if (mapped.colors && mapped.colors[0]) {
+            setSelectedColor(mapped.colors[0].name);
+          }
+          if (mapped.sizes && mapped.sizes[0]) {
+            setSelectedSize(mapped.sizes[0]);
+          }
+        }
+      });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [slug, language]);
+
+  // Reset local state ONLY when slug changes
   useEffect(() => {
     setSelectedImage(0);
-    setSelectedColor(product.colors[0]?.name || 'Standard');
-    setSelectedSize(product.sizes[0] || 'M');
     setIsAdding(false);
     setJustAdded(false);
-  }, [slug, product]);
+  }, [slug]);
+
+  // Calculate dynamic active price (support variant price override)
+  const activeVariant = (rawProduct as any).variants?.find(
+    (v: any) =>
+      v.colorName?.toLowerCase() === selectedColor.toLowerCase() &&
+      v.size?.toLowerCase() === selectedSize.toLowerCase(),
+  );
+  const displayPrice = activeVariant?.priceOverrideIdr
+    ? Number(activeVariant.priceOverrideIdr)
+    : product.price;
 
   const isFavorited = isInWishlist(product.id);
   const relatedProducts = PRODUCTS.filter((p) => p.id !== product.id).slice(0, 3).map(getLocalizedProduct);
@@ -120,7 +154,7 @@ export const ProductDetailPage: React.FC = () => {
               </h1>
 
               <p className="text-xl sm:text-2xl font-bold font-sans tracking-wide text-bone">
-                {formatIDR(product.price)}
+                {formatIDR(displayPrice)}
               </p>
             </div>
 

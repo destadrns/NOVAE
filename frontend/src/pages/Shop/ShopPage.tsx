@@ -1,18 +1,36 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { PRODUCTS } from '@/data/products';
+import { PRODUCTS, Product } from '@/data/products';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useLanguageStore } from '@/store/useLanguageStore';
+import { apiGetProducts, mapApiProductToFrontend } from '@/lib/api';
 
 export const ShopPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || 'All';
   const initialCollection = searchParams.get('collection') || 'All';
 
+  const [liveProducts, setLiveProducts] = useState<Product[]>(PRODUCTS);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [selectedCollection, setSelectedCollection] = useState<string>(initialCollection);
   const [sortBy, setSortBy] = useState<string>('featured');
   const { t, getLocalizedProduct } = useTranslation();
+  const { language } = useLanguageStore();
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadProducts() {
+      const { data } = await apiGetProducts({ lang: language });
+      if (isMounted && data && Array.isArray(data.items) && data.items.length > 0) {
+        setLiveProducts(data.items.map(mapApiProductToFrontend));
+      }
+    }
+    loadProducts();
+    return () => {
+      isMounted = false;
+    };
+  }, [language]);
 
   const categories = [
     { key: 'All', label: t.shop.categories.All },
@@ -25,19 +43,25 @@ export const ShopPage: React.FC = () => {
   const collections = ['All', 'FORM', 'MOTION', 'IDENTITY'] as const;
 
   const filteredProducts = useMemo(() => {
-    const matched = PRODUCTS.filter((p) => {
-      const matchCat = selectedCategory === 'All' || p.category === selectedCategory;
-      const matchCol = selectedCollection === 'All' || p.collection === selectedCollection;
-      return matchCat && matchCol;
-    }).sort((a, b) => {
-      if (sortBy === 'price-low') return a.price - b.price;
-      if (sortBy === 'price-high') return b.price - a.price;
-      if (sortBy === 'newest') return (b.newArrival ? 1 : 0) - (a.newArrival ? 1 : 0);
-      return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
-    });
+    const matched = liveProducts
+      .filter((p) => {
+        const matchCat =
+          selectedCategory === 'All' ||
+          p.category.toLowerCase() === selectedCategory.toLowerCase();
+        const matchCol =
+          selectedCollection === 'All' ||
+          p.collection.toLowerCase() === selectedCollection.toLowerCase();
+        return matchCat && matchCol;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'price-low') return a.price - b.price;
+        if (sortBy === 'price-high') return b.price - a.price;
+        if (sortBy === 'newest') return (b.newArrival ? 1 : 0) - (a.newArrival ? 1 : 0);
+        return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+      });
 
     return matched.map(getLocalizedProduct);
-  }, [selectedCategory, selectedCollection, sortBy, getLocalizedProduct]);
+  }, [liveProducts, selectedCategory, selectedCollection, sortBy, getLocalizedProduct]);
 
   return (
     <div className="pt-28 pb-32 bg-obsidian text-bone min-h-screen">
