@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -17,25 +17,59 @@ import {
 } from 'lucide-react';
 import { useAdminUIStore } from '@/store/useAdminUIStore';
 import { useAdminAuthStore } from '@/store/useAdminAuthStore';
-import { useAdminDataStore } from '@/store/useAdminDataStore';
 import { useAdminTranslation } from '@/i18n/useAdminTranslation';
+import {
+  adminGetProducts,
+  adminGetInventory,
+  adminGetOrders,
+} from '@/lib/api';
 import { clsx } from 'clsx';
 
 export const Sidebar: React.FC = () => {
   const { isSidebarCollapsed, toggleSidebar, isMobileSidebarOpen, closeMobileSidebar } =
     useAdminUIStore();
-  const { user, logout } = useAdminAuthStore();
-  const { products, orders, inventory } = useAdminDataStore();
+  const { user, token, logout } = useAdminAuthStore();
   const { t } = useAdminTranslation();
   const location = useLocation();
 
-  // Counts for sidebar badges
-  const lowStockCount = inventory.filter(
-    (i) => i.status === 'LOW_STOCK' || i.status === 'OUT_OF_STOCK'
-  ).length;
-  const pendingOrdersCount = orders.filter(
-    (o) => o.status === 'PAID' || o.status === 'PROCESSING'
-  ).length;
+  // Dynamic live counts from database
+  const [productCount, setProductCount] = useState<number | null>(null);
+  const [lowStockCount, setLowStockCount] = useState<number>(0);
+  const [activeOrdersCount, setActiveOrdersCount] = useState<number>(0);
+
+  const fetchBadgeCounts = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      const [prodRes, invRes, ordRes] = await Promise.all([
+        adminGetProducts(token, { limit: 1 }),
+        adminGetInventory(token),
+        adminGetOrders(token, { limit: 50 }),
+      ]);
+
+      if (prodRes.data) {
+        setProductCount(prodRes.data.meta.totalItems);
+      }
+      if (invRes.data) {
+        const alerts =
+          (invRes.data.summary.lowStockCount || 0) +
+          (invRes.data.summary.outOfStockCount || 0);
+        setLowStockCount(alerts);
+      }
+      if (ordRes.data) {
+        const active = ordRes.data.data.filter(
+          (o) => o.status === 'pending' || o.status === 'paid' || o.status === 'processing'
+        );
+        setActiveOrdersCount(active.length);
+      }
+    } catch {
+      // Fail silently
+    }
+  }, [token]);
+
+  useEffect(() => {
+    fetchBadgeCounts();
+  }, [fetchBadgeCounts, location.pathname]);
 
   const navItems = [
     {
@@ -47,7 +81,7 @@ export const Sidebar: React.FC = () => {
       label: t.nav.products,
       path: '/products',
       icon: Package,
-      badge: products.length.toString(),
+      badge: productCount !== null ? productCount.toString() : undefined,
     },
     {
       label: t.nav.collections,
@@ -65,7 +99,7 @@ export const Sidebar: React.FC = () => {
       label: t.nav.orders,
       path: '/orders',
       icon: ShoppingBag,
-      badge: pendingOrdersCount > 0 ? `${pendingOrdersCount} ${t.nav.activeBadge}` : undefined,
+      badge: activeOrdersCount > 0 ? `${activeOrdersCount} ${t.nav.activeBadge}` : undefined,
       badgeVariant: 'emerald',
     },
     {
