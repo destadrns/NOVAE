@@ -24,6 +24,9 @@ export const LenisProvider: React.FC<LenisProviderProps> = ({ children }) => {
     });
 
     lenisRef.current = lenis;
+    if (typeof window !== 'undefined') {
+      (window as any).__lenis = lenis;
+    }
 
     // Connect Lenis scroll to GSAP ScrollTrigger
     lenis.on('scroll', ScrollTrigger.update);
@@ -38,6 +41,9 @@ export const LenisProvider: React.FC<LenisProviderProps> = ({ children }) => {
     gsap.ticker.lagSmoothing(0);
 
     return () => {
+      if (typeof window !== 'undefined') {
+        (window as any).__lenis = null;
+      }
       if (rafCallbackRef.current) {
         gsap.ticker.remove(rafCallbackRef.current);
       }

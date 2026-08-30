@@ -12,6 +12,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
 
+import { ScrollToTop } from '@/components/layout/ScrollToTop';
+
 export const App: React.FC = () => {
   const { initAuth } = useAuthStore();
   const { language } = useLanguageStore();
@@ -26,6 +28,7 @@ export const App: React.FC = () => {
   }, [language, fetchCatalog]);
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <LenisProvider>
         <div className="min-h-screen bg-obsidian text-bone font-sans flex flex-col justify-between selection:bg-accent-lime selection:text-obsidian relative">
           {/* Navigation Bar */}

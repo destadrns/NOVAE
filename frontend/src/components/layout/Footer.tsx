@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Check, Instagram, Disc as TikTok, Compass } from 'lucide-react';
 import { useTranslation } from '@/i18n/useTranslation';
+import { scrollToTop } from '@/lib/scroll';
 
 export const Footer: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -29,7 +30,16 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-16 pb-16 border-b border-white/10">
           {/* Brand & Manifesto Column */}
           <div className="md:col-span-5 space-y-6">
-            <Link to="/" className="inline-block text-3xl sm:text-4xl font-extrabold tracking-widest font-display text-bone">
+            <Link
+              to="/"
+              onClick={(e) => {
+                if (window.location.pathname === '/') {
+                  e.preventDefault();
+                  scrollToTop(true);
+                }
+              }}
+              className="inline-block text-3xl sm:text-4xl font-extrabold tracking-widest font-display text-bone"
+            >
               NOVAÉ<span className="text-accent-lime">.</span>
             </Link>
             <p className="text-sm font-light text-bone-soft tracking-wider max-w-sm leading-relaxed">

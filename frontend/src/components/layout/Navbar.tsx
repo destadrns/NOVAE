@@ -6,6 +6,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTranslation } from '@/i18n/useTranslation';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { scrollToTop } from '@/lib/scroll';
 
 export const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -52,6 +53,12 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center shrink-0">
           <Link
             to="/"
+            onClick={(e) => {
+              if (location.pathname === '/') {
+                e.preventDefault();
+                scrollToTop(true);
+              }
+            }}
             className="group flex items-center gap-2 text-2xl md:text-3xl font-extrabold tracking-wider font-display text-bone transition-transform duration-300 hover:scale-[1.02]"
           >
             <span className="tracking-widest">NOVAÉ</span>
@@ -67,6 +74,12 @@ export const Navbar: React.FC = () => {
               <Link
                 key={link.path}
                 to={link.path}
+                onClick={(e) => {
+                  if (isActive) {
+                    e.preventDefault();
+                    scrollToTop(true);
+                  }
+                }}
                 className={`text-[11px] xl:text-xs uppercase tracking-[0.16em] xl:tracking-[0.22em] font-medium transition-all duration-300 hover:text-bone relative py-1 whitespace-nowrap ${
                   isActive ? 'text-bone font-semibold' : 'text-muted-light hover:text-bone'
                 }`}
