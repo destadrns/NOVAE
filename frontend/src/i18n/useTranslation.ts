@@ -153,60 +153,73 @@ const ARTICLE_LOCALIZATIONS: Record<string, {
   }
 };
 
+import { useCallback, useMemo } from 'react';
+
 export const useTranslation = () => {
-  const { language, setLanguage, toggleLanguage } = useLanguageStore();
-  const t = translations[language];
+  const language = useLanguageStore((state) => state.language);
+  const setLanguage = useLanguageStore((state) => state.setLanguage);
+  const toggleLanguage = useLanguageStore((state) => state.toggleLanguage);
+  const t = useMemo(() => translations[language], [language]);
 
-  const getLocalizedProduct = (product: Product): Product => {
-    if (!product) return product;
-    if (language === 'en') return product;
-    const loc = PRODUCT_LOCALIZATIONS[product.id]?.id;
-    if (!loc) return product;
+  const getLocalizedProduct = useCallback(
+    (product: Product): Product => {
+      if (!product) return product;
+      if (language === 'en') return product;
+      const loc = PRODUCT_LOCALIZATIONS[product.id]?.id;
+      if (!loc) return product;
 
-    return {
-      ...product,
-      tagline: product.tagline || loc.tagline,
-      description: product.description || loc.description,
-      details: {
-        ...product.details,
-        material: product.details?.material || loc.material,
-        fit: product.details?.fit || loc.fit,
-        care: product.details?.care || loc.care,
-        origin: product.details?.origin || loc.origin,
-      },
-    };
-  };
+      return {
+        ...product,
+        tagline: product.tagline || loc.tagline,
+        description: product.description || loc.description,
+        details: {
+          ...product.details,
+          material: product.details?.material || loc.material,
+          fit: product.details?.fit || loc.fit,
+          care: product.details?.care || loc.care,
+          origin: product.details?.origin || loc.origin,
+        },
+      };
+    },
+    [language],
+  );
 
-  const getLocalizedCollection = (collection: Collection): Collection => {
-    if (!collection) return collection;
-    if (language === 'en') return collection;
-    const loc = COLLECTION_LOCALIZATIONS[collection.id]?.id;
-    if (!loc) return collection;
+  const getLocalizedCollection = useCallback(
+    (collection: Collection): Collection => {
+      if (!collection) return collection;
+      if (language === 'en') return collection;
+      const loc = COLLECTION_LOCALIZATIONS[collection.id]?.id;
+      if (!loc) return collection;
 
-    return {
-      ...collection,
-      tagline: collection.tagline || loc.tagline,
-      description: collection.description || loc.description,
-      accentQuote: collection.accentQuote || loc.accentQuote,
-      materialSpec: collection.materialSpec || loc.materialSpec,
-      silhouetteSpec: collection.silhouetteSpec || loc.silhouetteSpec,
-      paletteSpec: collection.paletteSpec || loc.paletteSpec,
-    };
-  };
+      return {
+        ...collection,
+        tagline: collection.tagline || loc.tagline,
+        description: collection.description || loc.description,
+        accentQuote: collection.accentQuote || loc.accentQuote,
+        materialSpec: collection.materialSpec || loc.materialSpec,
+        silhouetteSpec: collection.silhouetteSpec || loc.silhouetteSpec,
+        paletteSpec: collection.paletteSpec || loc.paletteSpec,
+      };
+    },
+    [language],
+  );
 
-  const getLocalizedArticle = (article: Article): Article => {
-    if (language === 'en') return article;
-    const loc = ARTICLE_LOCALIZATIONS[article.id]?.id;
-    if (!loc) return article;
+  const getLocalizedArticle = useCallback(
+    (article: Article): Article => {
+      if (language === 'en') return article;
+      const loc = ARTICLE_LOCALIZATIONS[article.id]?.id;
+      if (!loc) return article;
 
-    return {
-      ...article,
-      title: loc.title || article.title,
-      excerpt: loc.excerpt || article.excerpt,
-      readTime: loc.readTime || article.readTime,
-      date: loc.date || article.date,
-    };
-  };
+      return {
+        ...article,
+        title: loc.title || article.title,
+        excerpt: loc.excerpt || article.excerpt,
+        readTime: loc.readTime || article.readTime,
+        date: loc.date || article.date,
+      };
+    },
+    [language],
+  );
 
   return {
     t,

@@ -76,7 +76,7 @@ export const ProductDetailPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [slug, language, storeProducts]);
+  }, [slug, language]);
 
   // Calculate dynamic active price (support variant price override)
   const activeVariant = (rawProduct as any).variants?.find(

@@ -15,9 +15,9 @@ import { useCatalogStore } from '@/store/useCatalogStore';
 import { ScrollToTop } from '@/components/layout/ScrollToTop';
 
 export const App: React.FC = () => {
-  const { initAuth } = useAuthStore();
-  const { language } = useLanguageStore();
-  const { fetchCatalog } = useCatalogStore();
+  const initAuth = useAuthStore((state) => state.initAuth);
+  const language = useLanguageStore((state) => state.language);
+  const fetchCatalog = useCatalogStore((state) => state.fetchCatalog);
 
   useEffect(() => {
     initAuth();

@@ -18,7 +18,7 @@ interface ProductCardProps {
   className?: string;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({
+const ProductCardComponent: React.FC<ProductCardProps> = ({
   product,
   aspect = 'portrait',
   index = 0,
@@ -244,3 +244,5 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     </motion.div>
   );
 };
+
+export const ProductCard = React.memo(ProductCardComponent);

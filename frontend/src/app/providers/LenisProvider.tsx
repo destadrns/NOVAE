@@ -15,12 +15,13 @@ export const LenisProvider: React.FC<LenisProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1.2,
+      duration: 0.85,
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: 'vertical',
       gestureOrientation: 'vertical',
       smoothWheel: true,
-      wheelMultiplier: 0.9,
+      wheelMultiplier: 1.0,
+      touchMultiplier: 1.2,
     });
 
     lenisRef.current = lenis;
@@ -31,14 +32,13 @@ export const LenisProvider: React.FC<LenisProviderProps> = ({ children }) => {
     // Connect Lenis scroll to GSAP ScrollTrigger
     lenis.on('scroll', ScrollTrigger.update);
 
-    // Store the callback reference so we can remove the exact same function
-    const rafCallback = (time: number) => {
+    const updateLenis = (time: number) => {
       lenis.raf(time * 1000);
     };
-    rafCallbackRef.current = rafCallback;
+    rafCallbackRef.current = updateLenis;
 
-    gsap.ticker.add(rafCallback);
-    gsap.ticker.lagSmoothing(0);
+    gsap.ticker.add(updateLenis);
+    gsap.ticker.lagSmoothing(500, 33);
 
     return () => {
       if (typeof window !== 'undefined') {

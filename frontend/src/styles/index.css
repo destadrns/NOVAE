@@ -108,6 +108,14 @@
   .bg-noise {
     background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
     background-size: 24px 24px;
+    contain: paint;
+  }
+
+  .gpu-accelerated {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    will-change: transform, opacity;
   }
 }
 
