@@ -147,7 +147,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       );
     } else {
       // Defaults for create
-      setSkuRoot(`NV-${Date.now().toString().slice(-4)}`);
+      const randomCode = Date.now().toString().slice(-4);
+      setSkuRoot(`NV-GRM-${randomCode}`);
       setSlug('');
       setCategoryId(categories[0]?.id ?? '');
       setCollectionId(collections[0]?.id ?? '');
@@ -156,38 +157,70 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setFeatured(false);
       setIsNewDrop(true);
       setLimitedRun(false);
-      setPrimaryImageUrl('https://images.unsplash.com/photo-1544441893-675973e31985');
-      setTags(['atelier', 'new']);
-      setNameId('Kemeja Atelier Kontemporer');
-      setShortDescId('Siluet proporsional dengan draping fluid.');
-      setDescId('Eksplorasi potongan avant-garde dari studio Bandung.');
-      setMaterialId('100% Organic Japanese Cotton');
-      setProvenanceId('Dibuat di Atelier Bandung.');
-      setNameEn('Contemporary Atelier Shirt');
-      setShortDescEn('Proportional silhouette with fluid drape.');
-      setDescEn('Avant-garde tailoring exploration from Bandung atelier.');
-      setMaterialEn('100% Organic Japanese Cotton');
-      setProvenanceEn('Handcrafted at Bandung Atelier.');
+      setPrimaryImageUrl('https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1200&auto=format&fit=crop');
+      setTags(['atelier', 'new-arrival']);
+      setNameId('');
+      setShortDescId('');
+      setDescId('');
+      setMaterialId('100% Organic Tailored Fabric');
+      setProvenanceId('Crafted in Atelier Bandung');
+      setNameEn('');
+      setShortDescEn('');
+      setDescEn('');
+      setMaterialEn('100% Organic Tailored Fabric');
+      setProvenanceEn('Crafted in Atelier Bandung');
       setVariants([
         {
-          sku: `NV-${Date.now().toString().slice(-4)}-BLK-S`,
+          sku: `NV-GRM-${randomCode}-BLK-S`,
           colorName: 'Obsidian Black',
           colorCode: '#0B0C0E',
           size: 'S',
-          initialStock: 6,
+          initialStock: 8,
           status: 'active',
         },
         {
-          sku: `NV-${Date.now().toString().slice(-4)}-BLK-M`,
+          sku: `NV-GRM-${randomCode}-BLK-M`,
           colorName: 'Obsidian Black',
           colorCode: '#0B0C0E',
           size: 'M',
-          initialStock: 8,
+          initialStock: 12,
+          status: 'active',
+        },
+        {
+          sku: `NV-GRM-${randomCode}-BLK-L`,
+          colorName: 'Obsidian Black',
+          colorCode: '#0B0C0E',
+          size: 'L',
+          initialStock: 10,
           status: 'active',
         },
       ]);
     }
   }, [product, categories, collections, isOpen]);
+
+  const handleGenerateStandardVariants = () => {
+    const root = skuRoot || `NV-GRM-${Date.now().toString().slice(-4)}`;
+    const standardSizes = ['S', 'M', 'L', 'XL'];
+    const color = varColor || 'Obsidian Black';
+    const colorCode = varColorCode || '#0B0C0E';
+    const colorTag = color.slice(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X') || 'STD';
+
+    const newGenerated = standardSizes.map((size) => ({
+      sku: `${root}-${colorTag}-${size}`,
+      colorName: color,
+      colorCode: colorCode,
+      size: size,
+      initialStock: Number(varStock) || 10,
+      status: 'active' as const,
+    }));
+
+    setVariants([...variants, ...newGenerated]);
+    addToast({
+      type: 'info',
+      title: '4 Varian Standar Dibuat',
+      message: `Varian ukuran S, M, L, XL (${color}) berhasil ditambahkan.`,
+    });
+  };
 
   const handleAddTag = () => {
     const trimmed = newTagInput.trim();
@@ -507,7 +540,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
               <Input
                 label="Harga Dasar (IDR) *"
                 type="number"
@@ -515,12 +548,29 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 value={basePriceIdr}
                 onChange={(e) => setBasePriceIdr(Number(e.target.value))}
               />
-              <Input
-                label="Gambar Utama (Primary Image URL)"
-                placeholder="https://images.unsplash.com/..."
-                value={primaryImageUrl}
-                onChange={(e) => setPrimaryImageUrl(e.target.value)}
-              />
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <Input
+                    label="Gambar Utama (Primary Image URL) *"
+                    placeholder="https://images.unsplash.com/..."
+                    value={primaryImageUrl}
+                    onChange={(e) => setPrimaryImageUrl(e.target.value)}
+                  />
+                </div>
+                {primaryImageUrl && (
+                  <div className="w-10 h-10 rounded-sm border border-surface-border overflow-hidden bg-charcoal shrink-0 mb-1">
+                    <img
+                      src={primaryImageUrl}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src =
+                          'https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1200&auto=format&fit=crop';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Flags */}
@@ -552,6 +602,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 />
                 <span>Limited Run Atelier</span>
               </label>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <Button type="button" size="sm" variant="secondary" onClick={() => setActiveTab('localization')}>
+                Lanjut ke Lokalisasi & Deskripsi →
+              </Button>
             </div>
           </div>
         )}
@@ -590,7 +646,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   label="Nama Produk (ID) *"
                   required
                   value={nameId}
-                  onChange={(e) => setNameId(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNameId(val);
+                    if (!isEdit && (!slug || slug === nameId.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''))) {
+                      setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
+                    }
+                  }}
                   placeholder="Oversized Form Jacket"
                 />
                 <Input
@@ -666,6 +728,15 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 </div>
               </div>
             )}
+
+            <div className="pt-2 flex justify-between">
+              <Button type="button" size="sm" variant="ghost" onClick={() => setActiveTab('basic')}>
+                ← Kembali ke Informasi Dasar
+              </Button>
+              <Button type="button" size="sm" variant="secondary" onClick={() => setActiveTab('media')}>
+                Lanjut ke Media & Galeri →
+              </Button>
+            </div>
           </div>
         )}
 
@@ -750,6 +821,15 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 ))}
               </div>
             </div>
+
+            <div className="pt-2 flex justify-between">
+              <Button type="button" size="sm" variant="ghost" onClick={() => setActiveTab('localization')}>
+                ← Kembali ke Lokalisasi
+              </Button>
+              <Button type="button" size="sm" variant="secondary" onClick={() => setActiveTab('variants')}>
+                Lanjut ke Varian & Stok →
+              </Button>
+            </div>
           </div>
         )}
 
@@ -758,9 +838,18 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           <div className="space-y-4">
             {/* Add Variant Form */}
             <div className="p-3.5 bg-charcoal-dark border border-surface-border rounded-sm space-y-3">
-              <span className="text-xs font-mono uppercase text-accent-lime font-bold block">
-                + Tambah Varian SKU Baru
-              </span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <span className="text-xs font-mono uppercase text-accent-lime font-bold block">
+                  + Tambah Varian SKU Baru
+                </span>
+                <button
+                  type="button"
+                  onClick={handleGenerateStandardVariants}
+                  className="text-[10px] font-mono uppercase tracking-wider bg-white/10 hover:bg-accent-lime hover:text-obsidian text-bone px-3 py-1.5 rounded-sm border border-white/20 transition-all font-semibold inline-flex items-center gap-1.5 self-start sm:self-auto"
+                >
+                  <span>⚡ Buat Otomatis 4 Ukuran (S, M, L, XL)</span>
+                </button>
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
                 <Input
                   label="SKU"
