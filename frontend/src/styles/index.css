@@ -52,6 +52,23 @@
     pointer-events: none;
   }
 
+  /* Eliminate hover calculation thrashing during fast scroll */
+  html.lenis-scrolling * {
+    pointer-events: none !important;
+  }
+  html.lenis-scrolling header,
+  html.lenis-scrolling nav {
+    pointer-events: auto !important;
+  }
+
+  /* Hardware accelerated rendering for smooth framerates */
+  .blur-gpu {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    contain: paint;
+  }
+
   /* Custom discreet scrollbar */
   ::-webkit-scrollbar {
     width: 6px;

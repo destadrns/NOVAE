@@ -18,11 +18,20 @@ export const Navbar: React.FC = () => {
   const { t } = useTranslation();
 
   useEffect(() => {
+    let lastScrolled = window.scrollY > 60;
+    let ticking = false;
+
     const handleScroll = () => {
-      if (window.scrollY > 60) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrolled = window.scrollY > 60;
+          if (currentScrolled !== lastScrolled) {
+            lastScrolled = currentScrolled;
+            setIsScrolled(currentScrolled);
+          }
+          ticking = false;
+        });
+        ticking = true;
       }
     };
 

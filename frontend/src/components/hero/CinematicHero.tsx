@@ -30,7 +30,7 @@ export const CinematicHero: React.FC = () => {
           trigger: containerRef.current,
           start: 'top top',
           end: 'bottom top',
-          scrub: 0.6,
+          scrub: 0.2,
         },
       });
 
@@ -41,6 +41,7 @@ export const CinematicHero: React.FC = () => {
           scale: 1.15,
           yPercent: 14,
           ease: 'none',
+          willChange: 'transform',
         },
         0
       );

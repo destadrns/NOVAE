@@ -42,8 +42,9 @@ export const MoveYourWay: React.FC = () => {
           start: 'top top',
           end: '+=140%',
           pin: true,
-          scrub: 0.8,
+          scrub: 0.2,
           anticipatePin: 1,
+          fastScrollEnd: true,
           onUpdate: (self) => {
             const pct = Math.round(self.progress * 100);
             // Direct DOM update — no React re-render
