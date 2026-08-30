@@ -520,3 +520,45 @@ export async function apiGetArticleBySlug(slug: string, lang: string = 'id') {
     return { data: null, error: { statusCode: 0, message: 'Network error' } };
   }
 }
+
+// ================================================================
+// COLLECTIONS (Public)
+// ================================================================
+
+export interface ApiCollectionItem {
+  id: string;
+  code: string;
+  slug: string;
+  name: string;
+  description?: string;
+  coverImageUrl?: string;
+  sortOrder?: number;
+}
+
+export async function apiGetCollections(lang: string = 'id') {
+  const url = `${API_BASE_URL}/collections?lang=${lang}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      return { data: null, error: { statusCode: res.status, message: 'Failed to fetch collections' } };
+    }
+    const body: ApiCollectionItem[] = await res.json();
+    return { data: body, error: null };
+  } catch {
+    return { data: null, error: { statusCode: 0, message: 'Network error' } };
+  }
+}
+
+export async function apiGetCollectionBySlug(slug: string, lang: string = 'id') {
+  const url = `${API_BASE_URL}/collections/${slug}?lang=${lang}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      return { data: null, error: { statusCode: res.status, message: 'Collection not found' } };
+    }
+    const body: ApiCollectionItem = await res.json();
+    return { data: body, error: null };
+  } catch {
+    return { data: null, error: { statusCode: 0, message: 'Network error' } };
+  }
+}

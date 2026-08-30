@@ -1,17 +1,77 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { COLLECTIONS } from '@/data/collections';
-import { PRODUCTS } from '@/data/products';
+import { COLLECTIONS, Collection } from '@/data/collections';
+import { PRODUCTS, Product } from '@/data/products';
 import { ProductCard } from '@/components/products/ProductCard';
 import { ArrowRight } from 'lucide-react';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useLanguageStore } from '@/store/useLanguageStore';
+import { apiGetCollections, apiGetProducts, mapApiProductToFrontend } from '@/lib/api';
 
 export const CollectionsPage: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
   const { t, getLocalizedCollection, getLocalizedProduct } = useTranslation();
+  const { language } = useLanguageStore();
+
+  const [liveCollections, setLiveCollections] = useState<Collection[]>(COLLECTIONS);
+  const [liveProducts, setLiveProducts] = useState<Product[]>(PRODUCTS);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadData() {
+      const [colRes, prodRes] = await Promise.all([
+        apiGetCollections(language),
+        apiGetProducts({ lang: language }),
+      ]);
+
+      if (isMounted) {
+        if (colRes.data && Array.isArray(colRes.data) && colRes.data.length > 0) {
+          const mappedCols: Collection[] = colRes.data.map((c) => {
+            const fallback = COLLECTIONS.find(
+              (fc) =>
+                fc.id.toLowerCase() === c.slug.toLowerCase() ||
+                fc.code.toLowerCase() === c.code.toLowerCase() ||
+                fc.name.toLowerCase() === c.name.toLowerCase(),
+            );
+            return {
+              id: c.slug || c.id,
+              code: c.code || fallback?.code || '01',
+              name: c.name || fallback?.name || c.code,
+              description: c.description || fallback?.description || '',
+              tagline: fallback?.tagline || 'Crafted series.',
+              accentQuote: fallback?.accentQuote || 'Define your own form.',
+              heroImage: c.coverImageUrl || fallback?.heroImage || 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=800',
+              detailImage: fallback?.detailImage || 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=800',
+              productCount: fallback?.productCount || 6,
+              featuredSlug: fallback?.featuredSlug || 'oversized-form-jacket',
+              materialSpec: fallback?.materialSpec || 'Curated Atelier Materials',
+              silhouetteSpec: fallback?.silhouetteSpec || 'Sculptural Tailoring',
+              paletteSpec: fallback?.paletteSpec || 'Obsidian • Raw Stone • Slate',
+              location: fallback?.location || 'ATELIER NOVAE // ARCHIVE',
+            };
+          });
+          setLiveCollections(mappedCols);
+        }
+
+        if (prodRes.data && Array.isArray(prodRes.data.items) && prodRes.data.items.length > 0) {
+          setLiveProducts(prodRes.data.items.map(mapApiProductToFrontend));
+        }
+      }
+    }
+
+    loadData();
+    return () => {
+      isMounted = false;
+    };
+  }, [language]);
 
   const rawSelectedCol = id
-    ? COLLECTIONS.find((c) => c.id.toLowerCase() === id.toLowerCase()) || COLLECTIONS[0]
+    ? liveCollections.find(
+        (c) =>
+          c.id.toLowerCase() === id.toLowerCase() ||
+          c.code.toLowerCase() === id.toLowerCase() ||
+          c.name.toLowerCase() === id.toLowerCase(),
+      ) || liveCollections[0]
     : null;
 
   const selectedCol = rawSelectedCol ? getLocalizedCollection(rawSelectedCol) : null;
@@ -63,18 +123,22 @@ export const CollectionsPage: React.FC = () => {
                 {t.collectionsPage.piecesInSeries}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                {PRODUCTS.filter(
-                  (p) => p.collection.toLowerCase() === selectedCol.name.toLowerCase()
-                ).map((product) => (
-                  <ProductCard key={product.id} product={getLocalizedProduct(product)} />
-                ))}
+                {liveProducts
+                  .filter(
+                    (p) =>
+                      p.collection.toLowerCase() === selectedCol.name.toLowerCase() ||
+                      p.collection.toLowerCase() === selectedCol.code.toLowerCase(),
+                  )
+                  .map((product) => (
+                    <ProductCard key={product.id} product={getLocalizedProduct(product)} />
+                  ))}
               </div>
             </div>
           </div>
         ) : (
           /* All 3 collections overview */
           <div className="space-y-24">
-            {COLLECTIONS.map((rawCol) => {
+            {liveCollections.map((rawCol) => {
               const col = getLocalizedCollection(rawCol);
               return (
                 <div key={col.id} className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center border-b border-white/10 pb-20 last:border-0">

@@ -241,6 +241,26 @@ export async function adminGetCollections(token: string | null) {
   return fetchWithAuth<BackendCollection[]>('/admin/collections', token);
 }
 
+export async function adminCreateCollection(token: string | null, payload: any) {
+  return fetchWithAuth<BackendCollection>('/admin/collections', token, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminUpdateCollection(token: string | null, id: string, payload: any) {
+  return fetchWithAuth<BackendCollection>(`/admin/collections/${id}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminDeleteCollection(token: string | null, id: string) {
+  return fetchWithAuth<{ message: string; id: string }>(`/admin/collections/${id}`, token, {
+    method: 'DELETE',
+  });
+}
+
 export async function adminGetCategories(token?: string | null) {
   return fetchWithAuth<BackendCategory[]>('/categories', token);
 }
