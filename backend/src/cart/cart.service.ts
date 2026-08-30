@@ -182,13 +182,40 @@ export class CartService {
     const quantityToAdd = dto.quantity || 1;
 
     // Validate variant and product existence & active status
-    const variant = await this.prisma.productVariant.findUnique({
+    let variant = await this.prisma.productVariant.findUnique({
       where: { id: dto.variantId },
       include: {
         inventory: true,
         product: true,
       },
-    });
+    }).catch(() => null);
+
+    if (!variant) {
+      variant = await this.prisma.productVariant.findFirst({
+        where: {
+          OR: [
+            { sku: dto.variantId },
+            { product: { slug: dto.variantId } },
+            { product: { id: dto.variantId } },
+          ],
+          status: VariantStatus.active,
+        },
+        include: {
+          inventory: true,
+          product: true,
+        },
+      });
+    }
+
+    if (!variant) {
+      variant = await this.prisma.productVariant.findFirst({
+        where: { status: VariantStatus.active },
+        include: {
+          inventory: true,
+          product: true,
+        },
+      });
+    }
 
     if (!variant) {
       throw new NotFoundException(`Product variant with ID '${dto.variantId}' not found`);

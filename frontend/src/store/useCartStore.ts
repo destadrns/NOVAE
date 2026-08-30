@@ -125,79 +125,36 @@ export const useCartStore = create<CartState>((set, get) => ({
         ? colorOrQuantity
         : 1;
 
-    // If product has backend variant UUID attached, use backend API
-    const matchingVariant = product.variants?.find(
-      (v: any) => v.colorName === chosenColor && v.size === chosenSize,
-    );
+    // Find variant from product object
+    const matchingVariant =
+      product.variants?.find(
+        (v: any) =>
+          v.id &&
+          (!chosenColor || v.colorName?.toLowerCase() === chosenColor.toLowerCase()) &&
+          (!chosenSize || v.size?.toLowerCase() === chosenSize.toLowerCase()),
+      ) || product.variants?.[0];
 
-    if (matchingVariant?.id) {
-      set({ isLoading: true, error: null });
-      const { data, error } = await apiAddToCart(matchingVariant.id, qty, authToken, sessionKey, lang);
-      set({ isLoading: false });
+    const variantId = matchingVariant?.id || product.slug || product.id;
 
-      if (!error && data) {
-        set({
-          items: data.items,
-          itemCount: data.itemCount,
-          subtotalIdr: data.subtotalIdr,
-        });
-        return true;
-      }
+    set({ isLoading: true, error: null });
+    const { data, error } = await apiAddToCart(variantId, qty, authToken, sessionKey, lang);
+    set({ isLoading: false });
+
+    if (!error && data) {
+      set({
+        items: data.items,
+        itemCount: data.itemCount,
+        subtotalIdr: data.subtotalIdr,
+      });
+      return true;
     }
 
-    // Fallback local optimistic item addition
-    const uniqueId = `${product.id}-${chosenColor}-${chosenSize}`;
-    const price = product.price || product.basePriceIdr || 0;
-    const imageUrl = product.images?.[0] || null;
+    if (error) {
+      set({ error: Array.isArray(error.message) ? error.message.join(', ') : error.message });
+      return false;
+    }
 
-    set((state) => {
-      const existingIndex = state.items.findIndex((item) => item.id === uniqueId);
-      let updatedItems: CartItem[];
-
-      if (existingIndex > -1) {
-        updatedItems = state.items.map((item, idx) =>
-          idx === existingIndex
-            ? {
-                ...item,
-                quantity: item.quantity + qty,
-                totalPriceIdr: (item.quantity + qty) * item.unitPriceIdr,
-              }
-            : item,
-        );
-      } else {
-        const newItem: CartItem = {
-          id: uniqueId,
-          variantId: uniqueId,
-          productId: product.id,
-          productSlug: product.slug,
-          productName: product.name || product.title,
-          colorName: chosenColor,
-          colorCode: product.colors?.find((c: any) => c.name === chosenColor)?.hex || null,
-          size: chosenSize,
-          sku: `${product.slug}-${chosenColor}-${chosenSize}`.toUpperCase(),
-          imageUrl,
-          quantity: qty,
-          unitPriceIdr: price,
-          totalPriceIdr: price * qty,
-          availableQuantity: 99,
-          isAvailable: true,
-          isLowStock: false,
-          isOutOfStock: false,
-        };
-        updatedItems = [...state.items, newItem];
-      }
-
-      const totalItems = updatedItems.reduce((acc, i) => acc + i.quantity, 0);
-      const subtotal = updatedItems.reduce((acc, i) => acc + i.totalPriceIdr, 0);
-
-      return {
-        items: updatedItems,
-        itemCount: totalItems,
-        subtotalIdr: subtotal,
-      };
-    });
-
-    return true;
+    return false;
   },
 
   updateQuantity: async (itemId, quantity, token, lang = 'id') => {
