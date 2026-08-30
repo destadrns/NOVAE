@@ -15,6 +15,7 @@ import {
   ShipmentStatus,
   LanguageCode,
 } from '@prisma/client';
+import { PaymentScenario } from './dto/simulate-payment.dto';
 
 describe('OrdersService', () => {
   let service: OrdersService;
@@ -690,6 +691,185 @@ describe('OrdersService', () => {
       await expect(
         service.adminUpdateOrderStatus('order-1', OrderStatus.paid, mockAdmin),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('simulatePayment', () => {
+    const pendingOrder: any = {
+      id: 'order-1',
+      orderNumber: 'NOV-2026-0001',
+      userId: mockUser.id,
+      status: OrderStatus.pending,
+      paymentStatus: PaymentStatus.pending,
+      fulfillmentStatus: FulfillmentStatus.unfulfilled,
+      subtotalIdr: 2500000n,
+      shippingIdr: 50000n,
+      taxIdr: 0n,
+      discountIdr: 0n,
+      totalIdr: 2550000n,
+      customerEmail: 'customer@novae.atelier',
+      shippingAddressSnapshot: mockDto.shippingAddress,
+      items: [
+        {
+          id: 'item-1',
+          variantId: 'var-1',
+          quantity: 2,
+          unitPriceIdr: 2500000n,
+          lineTotalIdr: 2500000n,
+          productNameSnapshot: 'Oversized Form Jacket',
+          skuSnapshot: 'NOV-OFSJ-BLK-M',
+        },
+      ],
+      payments: [
+        {
+          id: 'pay-1',
+          provider: 'manual',
+          method: 'bca_va',
+          amountIdr: 2550000n,
+          status: PaymentStatus.pending,
+          paidAt: null,
+        },
+      ],
+    };
+
+    it('should successfully simulate payment (success scenario)', async () => {
+      prisma.order.findUnique
+        .mockResolvedValueOnce(pendingOrder)
+        .mockResolvedValueOnce({
+          ...pendingOrder,
+          status: OrderStatus.paid,
+          paymentStatus: PaymentStatus.paid,
+          payments: [{ ...pendingOrder.payments[0], status: PaymentStatus.paid, paidAt: new Date() }],
+        });
+
+      const result = await service.simulatePayment(mockUser, 'order-1', {
+        scenario: PaymentScenario.SUCCESS,
+        method: 'bca_va',
+      });
+
+      expect(result.status).toBe(OrderStatus.paid);
+      expect(result.paymentStatus).toBe(PaymentStatus.paid);
+      expect(prisma.payment.updateMany).toHaveBeenCalledWith({
+        where: { orderId: 'order-1' },
+        data: expect.objectContaining({
+          status: PaymentStatus.paid,
+          method: 'bca_va',
+        }),
+      });
+      expect(prisma.order.update).toHaveBeenCalledWith({
+        where: { id: 'order-1' },
+        data: {
+          status: OrderStatus.paid,
+          paymentStatus: PaymentStatus.paid,
+        },
+      });
+      expect(prisma.orderStatusHistory.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          orderId: 'order-1',
+          fromStatus: OrderStatus.pending,
+          toStatus: OrderStatus.paid,
+          changedBy: mockUser.id,
+        }),
+      });
+    });
+
+    it('should simulate payment failure (failed scenario) without cancelling order', async () => {
+      prisma.order.findUnique
+        .mockResolvedValueOnce(pendingOrder)
+        .mockResolvedValueOnce({
+          ...pendingOrder,
+          status: OrderStatus.pending,
+          paymentStatus: PaymentStatus.failed,
+          payments: [{ ...pendingOrder.payments[0], status: PaymentStatus.failed }],
+        });
+
+      const result = await service.simulatePayment(mockUser, 'order-1', {
+        scenario: PaymentScenario.FAILED,
+        method: 'credit_card',
+      });
+
+      expect(result.status).toBe(OrderStatus.pending);
+      expect(result.paymentStatus).toBe(PaymentStatus.failed);
+      expect(prisma.payment.updateMany).toHaveBeenCalledWith({
+        where: { orderId: 'order-1' },
+        data: expect.objectContaining({
+          status: PaymentStatus.failed,
+          method: 'credit_card',
+        }),
+      });
+      expect(prisma.order.update).toHaveBeenCalledWith({
+        where: { id: 'order-1' },
+        data: {
+          paymentStatus: PaymentStatus.failed,
+        },
+      });
+    });
+
+    it('should simulate payment cancellation and release reserved inventory (cancel scenario)', async () => {
+      prisma.order.findUnique
+        .mockResolvedValueOnce(pendingOrder)
+        .mockResolvedValueOnce({
+          ...pendingOrder,
+          status: OrderStatus.cancelled,
+          paymentStatus: PaymentStatus.failed,
+          fulfillmentStatus: FulfillmentStatus.cancelled,
+        });
+
+      const result = await service.simulatePayment(mockUser, 'order-1', {
+        scenario: PaymentScenario.CANCEL,
+      });
+
+      expect(result.status).toBe(OrderStatus.cancelled);
+      expect(result.paymentStatus).toBe(PaymentStatus.failed);
+      expect(result.fulfillmentStatus).toBe(FulfillmentStatus.cancelled);
+
+      // Verify inventory release
+      expect(prisma.inventory.update).toHaveBeenCalledWith({
+        where: { variantId: 'var-1' },
+        data: { reservedQuantity: { decrement: 2 } },
+      });
+      expect(prisma.inventoryMovement.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          variantId: 'var-1',
+          movementType: InventoryMovementType.release,
+          quantityDelta: -2,
+        }),
+      });
+    });
+
+    it('should reject payment simulation on already paid order', async () => {
+      const paidOrder = { ...pendingOrder, status: OrderStatus.paid, paymentStatus: PaymentStatus.paid };
+      prisma.order.findUnique.mockResolvedValue(paidOrder);
+
+      await expect(
+        service.simulatePayment(mockUser, 'order-1', { scenario: PaymentScenario.SUCCESS }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject payment simulation on cancelled order', async () => {
+      const cancelledOrder = { ...pendingOrder, status: OrderStatus.cancelled };
+      prisma.order.findUnique.mockResolvedValue(cancelledOrder);
+
+      await expect(
+        service.simulatePayment(mockUser, 'order-1', { scenario: PaymentScenario.SUCCESS }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject payment simulation for non-owned order', async () => {
+      const otherUserOrder = { ...pendingOrder, userId: 'other-user-uuid' };
+      prisma.order.findUnique.mockResolvedValue(otherUserOrder);
+
+      await expect(
+        service.simulatePayment(mockUser, 'order-1', { scenario: PaymentScenario.SUCCESS }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw NotFoundException if order does not exist', async () => {
+      prisma.order.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.simulatePayment(mockUser, 'non-existent', { scenario: PaymentScenario.SUCCESS }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

@@ -1,6 +1,10 @@
 # NOVAÉ
 
-A digital-first contemporary fashion atelier combining editorial storytelling, immersive interactions, personalization, and commerce.
+> **Portfolio-grade full-stack digital fashion commerce prototype.**
+
+A digital-first contemporary fashion atelier combining editorial storytelling, immersive interactions, personalization, and a robust transactional commerce foundation.
+
+![NOVAÉ Storefront Hero](docs/screenshots/hero-storefront.png)
 
 ---
 
@@ -8,7 +12,7 @@ A digital-first contemporary fashion atelier combining editorial storytelling, i
 
 High-end digital fashion often forces a compromise: either template-driven e-commerce grids that lack editorial identity, or experimental showcase sites unable to handle real transactional inventory and multi-variant catalog workflows.
 
-NOVAÉ bridges this gap. It explores an avant-garde digital atelier experience featuring brutalist luxury aesthetics, inertial scroll interactions, bilingual narratives, and a structured multi-tier engineering architecture built on modern web standards.
+NOVAÉ bridges this gap. Built from the ground up as a portfolio-grade commerce demonstration, it explores an avant-garde digital atelier experience featuring brutalist luxury aesthetics, inertial scroll interactions, bilingual narratives, and a structured multi-tier engineering architecture built on modern web standards.
 
 ```text
 Customer Frontend ─┐
@@ -19,39 +23,91 @@ Admin App ──────────┘
 
 ---
 
+## Portfolio Positioning
+
+NOVAÉ is intentionally built as a functional portfolio and demonstration commerce environment. It features complete, production-grade architecture across all layers:
+
+- **Real Frontend Applications**: High-fidelity customer storefront and backoffice operations portal built with React, Vite, Tailwind CSS, GSAP, and Framer Motion.
+- **Real Backend APIs**: Strongly-typed RESTful service architecture built with NestJS, class-validator DTOs, and global exception envelopes.
+- **Real PostgreSQL Persistence**: 15 sequential SQL migrations, normalized relational models, strict foreign keys, CHECK constraints, and automated `updated_at` triggers via Prisma ORM.
+- **Real Authentication & RBAC**: Supabase Auth session verification with server-authoritative role evaluation (`customer` vs `admin`).
+- **Real Catalog & Inventory Logic**: Full multi-variant formulation, atomic transaction boundaries, optimistic reservation locks, and stock movement audit ledgers.
+- **Real Cart, Checkout & Order Lifecycle**: Persistent customer baskets, server-side price calculation snapshots, and sequential order generation (`NOV-YYYY-XXXX`).
+- **Simulated Payment Workflow**: Interactive in-browser payment simulator covering Virtual Accounts (BCA, Mandiri), QRIS, Credit Card, and Manual Transfer. **No real monetary transactions or banking credentials are processed.**
+
+---
+
 ## Preview
 
-NOVAÉ is visually anchored by a refined brutalist design system using obsidian (`#0B0C0E`), bone white (`#F3F2EE`), and electric lime (`#E2F163`) accents:
+### Customer Storefront & Catalog
+Cinematic hero showcase featuring brutalist luxury typography, atmospheric soundscapes, inertial smooth scrolling with Lenis, and chapter-based collection discovery (`FORM`, `MOTION`, `IDENTITY`).
 
-- **Customer Storefront (`/`)**: Cinematic hero showcase with inertial smooth scrolling, collection discovery chapters, audio atmosphere, and interactive garment grids.
-- **Product Experience (`/products/:slug`)**: Multi-angle studio gallery, dynamic color swatches, size availability matrix, and fabric provenance accordions.
-- **Style Finder (`/style-finder`)**: Interactive multi-step questionnaire translating aesthetic preferences into wardrobe recommendations.
-- **Atelier Backoffice (`admin/`)**: Operational dashboard with live catalog search, multi-faceted filtering, variant matrix management, and product formulation modals.
+![NOVAÉ Storefront](docs/screenshots/storefront.png)
+
+---
+
+### Product Experience & Variant Matrix
+Studio photography gallery, dynamic color swatches, size availability selectors, fabric provenance specifications, and real-time inventory state badges.
+
+![NOVAÉ Product Detail](docs/screenshots/product-detail.png)
+
+---
+
+### Style Finder Personalization
+Interactive multi-step questionnaire that translates aesthetic preferences and silhouette signals into tailored wardrobe recommendations.
+
+![NOVAÉ Style Finder](docs/screenshots/style-finder.png)
+
+---
+
+### Customer Checkout & Simulated Payment
+Multi-step checkout flow with shipping address capture, courier selection, server-authoritative pricing snapshots, and an interactive payment simulator modal.
+
+![NOVAÉ Checkout & Order Summary](docs/screenshots/checkout.png)
+
+---
+
+### Atelier Operations Dashboard
+Executive backoffice overview presenting real-time business telemetry, gross revenue trends, capsule sales distributions, customer counts, and low-stock alerts.
+
+![NOVAÉ Atelier Operations Dashboard](docs/screenshots/admin-dashboard.png)
+
+---
+
+### Inventory Management & SKU Matrix
+Real-time warehouse inventory matrix with physical vs reserved stock allocation, depletion thresholds, quick restock actions, and movement audit logs.
+
+![NOVAÉ SKU Matrix & Inventory Operations](docs/screenshots/admin-inventory.png)
 
 ---
 
 ## Key Product Experiences
 
-- **Editorial Storefront**: Minimalist luxury aesthetics pairing responsive layouts with fluid typography, atmospheric soundscapes, and curated garment displays.
-- **Scroll-Driven Storytelling**: Inertial scrolling and cinematic reveals orchestrated with Lenis, GSAP ScrollTrigger, and Framer Motion.
-- **Thematic Collections**: Chapter-based garment presentations exploring sculptural forms across `FORM` (Chapter 01), `MOTION` (Chapter 02), and `IDENTITY` (Chapter 03).
-- **Style Finder Personalization**: Interactive multi-step questionnaire that matches individual aesthetic preferences with tailored silhouette recommendations.
+- **Editorial Storefront**: Avant-garde luxury aesthetic pairing responsive layouts with fluid typography, atmospheric soundscapes, and curated garment presentations.
+- **Scroll-Driven Storytelling**: Inertial scrolling and cinematic chapter reveals orchestrated with Lenis, GSAP ScrollTrigger, and Framer Motion.
+- **Thematic Collections**: Curated capsule presentations exploring sculptural forms across `FORM` (Chapter 01), `MOTION` (Chapter 02), and `IDENTITY` (Chapter 03).
+- **Style Finder Personalization**: Interactive 3-step questionnaire matching aesthetic philosophies with curated garment suggestions.
 - **Product & Variant Matrix**: Dynamic color swatches, size selection, localized garment provenance, and real-time inventory availability states.
-- **Bilingual Experience**: Native Indonesian (`id`) and English (`en`) support across customer-facing copy, product details, and backoffice tooling.
-- **Role-Based Authentication**: Unified session management powered by Supabase Auth with server-enforced role verification (`customer` vs `admin`).
-- **Atelier Backoffice Portal**: Dedicated administrative portal for live catalog inspection, multi-tab product formulation, variant pricing overrides, and non-destructive archiving.
+- **Bilingual Narrative**: Native Indonesian (`id`) and English (`en`) localization across all customer-facing copy, catalog metadata, and backoffice tooling.
+- **Customer Authentication**: Unified identity management powered by Supabase Auth with server-verified role-based access control.
+- **Persistent Cart & Wishlist**: Resilient basket persistence, polymorphic variant line items, guest-to-auth cart migration, and client-side state synchronization.
+- **Transactional Checkout & Order Placement**: Multi-step checkout with server-authoritative calculations, double-lock inventory reservations, and sequential `NOV-YYYY-XXXX` code generation.
+- **Simulated Payment Gateway**: Interactive sandbox modal supporting Virtual Account, QRIS, Credit Card 3DS, and Bank Transfer with instant Success, Failed, and Cancellation state handling.
+- **Atelier Backoffice Portal**: Operations dashboard for catalog formulation, variant matrix management, warehouse inventory tracking, and customer order fulfillment queues.
 
 ---
 
 ## Monorepo Architecture
 
-The repository is structured as an npm monorepo separating customer interactions, operations, and backend services:
+The repository is organized as an npm monorepo separating customer-facing interfaces, backoffice operations, and backend services:
 
 ```text
 NOVAÉ/
 ├── frontend/             # Customer storefront (React, Vite, Tailwind CSS)
 ├── admin/                # Atelier backoffice (React, Vite, Tailwind CSS)
 ├── backend/              # REST API & database services (NestJS, Prisma, PostgreSQL)
+├── docs/                 # Public documentation & preview assets
+│   └── screenshots/      # Application screenshots
 └── docker-compose.yml    # Local PostgreSQL container configuration
 ```
 
@@ -59,130 +115,228 @@ NOVAÉ/
 
 ## Technology Stack
 
-- **Frontend & Admin**: React, Vite, TypeScript, Tailwind CSS
-- **Motion & Interactions**: GSAP, ScrollTrigger, Framer Motion, Lenis
+### Frontend & Admin
+- **Framework**: React 18, Vite, TypeScript
+- **Styling**: Tailwind CSS, Vanilla CSS design tokens
+- **Animation & Motion**: GSAP, ScrollTrigger, Framer Motion, Lenis
 - **State Management**: Zustand
-- **Backend API**: NestJS, TypeScript, Express
-- **Database & ORM**: PostgreSQL, Prisma ORM
-- **Authentication**: Supabase Auth, Passport JWT
-- **Testing**: Jest, Supertest, PGlite (in-memory test engine)
-- **Infrastructure**: Docker, Docker Compose
+- **Icons**: Lucide React
+
+### Backend API
+- **Framework**: NestJS, TypeScript, Express
+- **ORM & Database**: Prisma ORM, PostgreSQL (via Docker or local instance)
+- **Validation**: class-validator, class-transformer
+- **API Documentation**: OpenAPI / Swagger (`@nestjs/swagger`)
+
+### Authentication & Security
+- **Identity Provider**: Supabase Auth
+- **Token Verification**: Passport JWT, jsonwebtoken
+- **Authorization**: NestJS Guards (`SupabaseAuthGuard`, `RolesGuard`)
+
+### Testing & Quality Assurance
+- **Unit & Integration Testing**: Jest, Supertest
+- **In-Memory PostgreSQL Engine**: PGlite (for deterministic standalone database tests)
+- **Database Validation**: Custom 112-assertion E2E migration and constraint verification suite
 
 ---
 
 ## Engineering Highlights
 
-- **Server-Authoritative RBAC**: Client session claims are never trusted directly. Every administrative route verifies user status and roles directly against the PostgreSQL `users` table via `SupabaseAuthGuard` and `RolesGuard`.
-- **Atomic Multi-Entity Transactions**: Creating or updating products executes within `prisma.$transaction`, atomically synchronizing base product attributes, bilingual translations, tag maps, gallery images, variants, and initial inventory rows with automatic rollback on error.
-- **Non-Destructive Archiving**: Products and variants linked to order history cannot be hard-deleted. The API enforces soft-delete archiving (`status = archived` / `inactive`) to protect historical records and foreign key integrity.
-- **Safe Inventory Projections**: Customer-facing APIs only expose availability states (`available`, `isLowStock`, `isOutOfStock`), preventing internal warehouse counts and inventory movements from leaking to public clients.
-- **Bilingual Schema Design**: Normalized translation tables with composite primary keys `(entity_id, language)` support clean multilingual localization with automatic Indonesian-to-English fallback handling.
-- **Database Integrity & Constraints**: 15 sequential SQL migrations enforce strict foreign keys, CHECK constraints (non-negative stock and base pricing), unique indexes, and automated `updated_at` triggers.
+- **Server-Authoritative RBAC**: Client session claims are never trusted directly. Every administrative endpoint validates identity and role claims (`customer` vs `admin`) directly against PostgreSQL records.
+- **Atomic Transaction Boundaries**: Multi-entity mutations—including product formulation, order placement, status transitions, and payment settlement—execute within atomic `prisma.$transaction` blocks with automatic rollback on error.
+- **Optimistic Inventory Reservation**: Order creation reserves physical stock (`reservedQuantity`) during checkout. If payment fails or an order is cancelled, reserved units are automatically released back to available stock.
+- **Concurrency & Idempotency Safeguards**: Prevents double-order placement and concurrent cart conversion with transaction-level status locks.
+- **Non-Destructive Archiving**: Products and variants referenced in historical orders cannot be hard-deleted. Soft-delete archiving (`status = archived` / `inactive`) preserves audit integrity and foreign key constraints.
+- **Bilingual Schema Design**: Normalized translation tables with composite keys `(entity_id, language)` support multi-language content with automatic Indonesian-to-English fallback resolution.
+- **Safe Public Inventory Projections**: Customer-facing APIs only expose availability states (`available`, `isLowStock`, `isOutOfStock`), preventing internal warehouse counts and inventory movements from leaking to public clients.
+- **Comprehensive Test Coverage**: 92 unit tests across 9 service suites and 77 end-to-end integration tests across 8 API suites passing with zero errors.
+
+---
+
+## Demo Flow
+
+Experience the complete end-to-end commerce lifecycle:
+
+```text
+[ Storefront ]
+      │
+      ▼
+Browse Collections (FORM / MOTION / IDENTITY)
+      │
+      ▼
+Product Detail (Select Color & Size)
+      │
+      ▼
+Add to Bag (Persistent Cart Sync)
+      │
+      ▼
+Checkout (Address & Courier Selection)
+      │
+      ▼
+Place Order (Atomic Stock Reservation & NOV-YYYY-XXXX Generation)
+      │
+      ▼
+Simulated Payment (Select VA / QRIS / Card → Trigger SUCCESS / FAILED / CANCEL)
+      │
+      ▼
+Customer Account (Inspect Order History & Payment Settlement)
+```
+
+```text
+[ Atelier Backoffice ]
+      │
+      ▼
+Admin Login (Role-Verified Portal Access)
+      │
+      ▼
+Operations Dashboard (Inspect Revenue & Low-Stock Alerts)
+      │
+      ▼
+Inventory Matrix (Monitor Reserved vs Physical Quantities)
+      │
+      ▼
+Order Management (Review Customer Orders, Payment State & Update Fulfillment)
+```
 
 ---
 
 ## Current Status
 
 ### Completed & Functional
-- **Database Layer**: Complete PostgreSQL lifecycle with 15 migrations, seed data, and a 112-assertion validation suite.
-- **Backend Foundation**: Centralized error envelopes, validation pipes, structured logging, CORS, Swagger docs, and health checks.
-- **Authentication & RBAC**: Supabase Auth integration with server-side profile provisioning, optional guest auth, and role guards.
-- **Admin Catalog & Inventory API**: Transactional product CRUD, variant matrix management, stock adjustments, and inventory movement audit logs.
+- **Database Architecture**: PostgreSQL schema with 15 SQL migrations, deterministic seed data, and a 112-assertion validation suite.
+- **Backend API Foundation**: Centralized error envelopes, validation pipes, structured logging, CORS, Swagger documentation, and health check probes.
+- **Authentication & RBAC**: Supabase Auth integration, server-side profile provisioning, and role guards.
+- **Admin Catalog & Inventory API**: Transactional product CRUD, variant matrix management, stock adjustments, and inventory movement audit ledgers.
 - **Commerce Subsystem (Cart & Wishlist)**: Persistent customer cart, polymorphic variant addition, guest-to-auth cart merge, and live wishlist synchronization.
-- **Customer Checkout & Order Review**: Multi-step checkout (`/checkout`), shipping address form, courier selection, server-authoritative calculations, and order confirmation.
-- **Transactional Order Placement**: Atomic cart-to-order transaction (`POST /api/v1/orders`), server-side price snapshots, sequential `NOV-YYYY-XXXX` code generation, double-lock inventory reservation, and cart conversion.
-- **Admin Order Management**: Protected `/api/v1/admin/orders` endpoints, status filtering, search, order detail view, status timeline, inventory context, controlled transitions (`pending → paid → processing → shipped → delivered`), and automatic stock release on cancellation.
-- **Customer Storefront**: Responsive interface, bilingual switcher, Style Finder, product detail pages, cart drawer, and live customer order history.
-- **Admin Backoffice**: Live API connection, product catalog management, inventory matrix, stock adjustment modals, and order management dashboard.
-- **Automated Tests**: 85 unit tests and 71 end-to-end integration tests passing with zero errors across 9 unit and 8 E2E suites.
+- **Customer Checkout & Order Placement**: Multi-step checkout (`/checkout`), shipping address form, courier selection, server-authoritative calculations, and atomic order creation.
+- **Admin Order Management**: Protected `/api/v1/admin/orders` endpoints, status filtering, search, order detail drawer, status timeline, inventory reservation context, and controlled state transitions (`pending → paid → processing → shipped → delivered`).
+- **Simulated Payment Workflow**: End-to-end simulated payment flow (`POST /api/v1/orders/:id/simulate-payment`) supporting Virtual Accounts (BCA, Mandiri), QRIS, Credit Card, and Manual Transfer. Full state machine sync between `Payment.status` and `Order.paymentStatus`, interactive sandbox simulator modal on checkout & account pages, and automatic inventory release on cancellation.
+- **Customer Storefront**: Responsive interface, bilingual switcher, Style Finder, product detail pages, cart drawer, live customer order history, and payment simulator triggers.
+- **Admin Backoffice**: Live API connection, product catalog management, inventory matrix, stock adjustment modals, and order management dashboard with payment settlement badges and timestamps.
+- **Automated Verification**: 92 unit tests (9 suites) and 77 end-to-end integration tests (8 suites) passing with zero errors.
 
 ### Upcoming Milestones
-- **Phase 4**: Payment gateway integration (Midtrans / Xendit).
-- **Phase 5**: Courier logistics API integration (JNE / J&T / GoSend) and shipment tracking webhooks.
-- **Phase 6**: Automated customer email notifications on order lifecycle updates.
-- **Phase 7**: Full Journal editorial CMS and production cloud deployment.
+- Customer order experience refinement & printable receipt view.
+- Fulfillment workflow refinement & packing slip generator.
+- Editorial Journal CMS & rich content publication.
+- Advanced atelier business analytics & inventory forecasting.
+- Final portfolio optimization and performance tuning.
 
 ---
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 20+ (Node.js 24 LTS recommended)
-- npm 10+
-- Docker & Docker Compose (for local PostgreSQL)
-
-### 1. Installation
-Clone the repository and install dependencies from the monorepo root:
-
-```bash
-git clone https://github.com/destadrns/NOVAE.git
-cd NOVAE
-npm install
-```
-
-### 2. Environment Configuration
-Copy the example environment templates:
-
-```bash
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-cp admin/.env.example admin/.env
-```
-
-### 3. Database Setup
-Start the PostgreSQL container, run migrations, and apply the initial atelier dataset:
-
-```bash
-# Start PostgreSQL container
-docker compose up -d
-
-# Run database migrations and seed data
-npm --prefix backend run db:migrate
-npm --prefix backend run db:seed
-
-# Verify database integrity (112 assertions)
-npm --prefix backend run db:validate
-```
-
-### 4. Running the Development Servers
-Start each service using root npm scripts:
-
-```bash
-# Customer Storefront (http://localhost:3000)
-npm run dev:frontend
-
-# Backend API Service (http://localhost:3001/api/v1)
-npm --prefix backend run start:dev
-
-# Atelier Backoffice (http://localhost:3002)
-npm run dev:admin -- --port 3002
-```
-
-- **Interactive API Documentation (Swagger)**: `http://localhost:3001/api/v1/docs`
-- **Health Check Probe**: `http://localhost:3001/api/v1/health`
+- **Node.js**: `v18.x` or higher
+- **npm**: `v9.x` or higher
+- **Docker & Docker Compose** (for PostgreSQL database) or a local PostgreSQL instance (`v15+`)
 
 ---
 
-## Testing & Quality Assurance
+### 1. Clone & Install Dependencies
 
 ```bash
-# Run backend unit tests (85 tests)
+git clone https://github.com/your-username/novae.git
+cd novae
+
+# Install monorepo dependencies across frontend, admin, and backend
+npm install
+```
+
+---
+
+### 2. Configure Environment Variables
+
+Create `.env` files in each project directory:
+
+#### Backend (`backend/.env`)
+```ini
+NODE_ENV=development
+PORT=3001
+API_PREFIX=api/v1
+DATABASE_URL="postgresql://novae:novae_secret@localhost:5432/novae_dev"
+
+# Supabase Auth Configuration
+SUPABASE_URL="https://your-supabase-project.supabase.co"
+SUPABASE_ANON_KEY="your-supabase-anon-key"
+SUPABASE_SERVICE_ROLE_KEY="your-supabase-service-role-key"
+SUPABASE_JWT_SECRET="your-supabase-jwt-secret-min-32-chars"
+```
+
+#### Customer Frontend (`frontend/.env`)
+```ini
+VITE_API_URL="http://localhost:3001/api/v1"
+VITE_SUPABASE_URL="https://your-supabase-project.supabase.co"
+VITE_SUPABASE_ANON_KEY="your-supabase-anon-key"
+```
+
+#### Admin App (`admin/.env`)
+```ini
+VITE_API_URL="http://localhost:3001/api/v1"
+VITE_SUPABASE_URL="https://your-supabase-project.supabase.co"
+VITE_SUPABASE_ANON_KEY="your-supabase-anon-key"
+```
+
+---
+
+### 3. Start PostgreSQL Database
+
+```bash
+# Start local PostgreSQL container via Docker Compose
+docker compose up -d
+```
+
+---
+
+### 4. Run Migrations, Seed & Validate Database
+
+```bash
+# Apply migrations and seed initial catalog data
+npm --prefix backend run db:setup
+
+# Run the 112-assertion database validation suite
+npm --prefix backend run db:validate
+```
+
+---
+
+### 5. Start Development Servers
+
+Run the applications concurrently or individually:
+
+```bash
+# Terminal 1 — Backend REST API (http://localhost:3001)
+npm --prefix backend run dev
+
+# Terminal 2 — Customer Storefront (http://localhost:3000)
+npm --prefix frontend run dev
+
+# Terminal 3 — Atelier Admin Portal (http://localhost:3002)
+npm --prefix admin run dev
+```
+
+| Service | URL | Description |
+| :--- | :--- | :--- |
+| **Customer Storefront** | `http://localhost:3000` | Public fashion storefront & checkout |
+| **Backend REST API** | `http://localhost:3001/api/v1` | Core commerce API endpoints |
+| **Atelier Admin Portal** | `http://localhost:3002` | Backoffice operations & catalog management |
+| **Swagger OpenAPI Docs** | `http://localhost:3001/api/v1/docs` | Interactive API documentation |
+| **Health Telemetry Probe** | `http://localhost:3001/api/v1/health` | System health & database probe |
+
+---
+
+### 6. Run Automated Test Suites
+
+```bash
+# Run all backend unit test suites (92 tests)
 npm --prefix backend run test
 
-# Run backend end-to-end tests (71 tests)
+# Run all backend end-to-end integration test suites (77 tests)
 npm --prefix backend run test:e2e
-
-# Run database validation suite (112 assertions)
-npm --prefix backend run db:validate
-
-# Production builds
-npm --prefix backend run build
-npm run build:frontend
-npm run build:admin
 ```
 
 ---
 
 ## License
 
-Private and proprietary atelier source code. © 2026 NOVAÉ Atelier. All rights reserved.
+This project is open source and available under the [ISC License](LICENSE).

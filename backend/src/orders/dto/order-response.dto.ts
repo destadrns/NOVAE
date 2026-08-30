@@ -36,6 +36,26 @@ export class OrderItemResponseDto {
   imageUrl?: string | null;
 }
 
+export class PaymentResponseDto {
+  @ApiProperty({ description: 'Payment UUID' })
+  id: string;
+
+  @ApiProperty({ description: 'Payment provider identifier', example: 'manual' })
+  provider: string;
+
+  @ApiPropertyOptional({ description: 'Payment method', example: 'bca_va' })
+  method?: string | null;
+
+  @ApiProperty({ description: 'Payment amount in IDR' })
+  amountIdr: number;
+
+  @ApiProperty({ enum: PaymentStatus, description: 'Payment transaction status' })
+  status: PaymentStatus;
+
+  @ApiPropertyOptional({ description: 'Timestamp when payment was confirmed paid' })
+  paidAt?: Date | null;
+}
+
 export class OrderResponseDto {
   @ApiProperty({ description: 'Order UUID' })
   id: string;
@@ -76,8 +96,11 @@ export class OrderResponseDto {
   @ApiProperty({ description: 'Snapshot of shipping address and courier info' })
   shippingAddress: any;
 
-  @ApiProperty({ description: 'List of snapshotted order line items', type: [OrderItemResponseDto] })
+  @ApiProperty({ description: 'List of snapshotted order line items', type: () => [OrderItemResponseDto] })
   items: OrderItemResponseDto[];
+
+  @ApiPropertyOptional({ description: 'Payment records and status', type: () => [PaymentResponseDto] })
+  payments?: PaymentResponseDto[];
 
   @ApiProperty({ description: 'Timestamp when order was placed' })
   placedAt: Date | null;

@@ -19,13 +19,16 @@ import {
   ShoppingBag,
   Trash2,
   Clock,
+  CreditCard,
 } from 'lucide-react';
+import { SimulatedPaymentModal } from '@/components/payment/SimulatedPaymentModal';
 
 export const AccountPage: React.FC = () => {
   const { user, token, signOut } = useAuthStore();
   const { language } = useLanguageStore();
   const { wishlistIds, items: wishlistItems, fetchWishlist, toggleWishlist } = useWishlistStore();
   const [orders, setOrders] = useState<FrontendOrder[]>([]);
+  const [selectedPaymentOrder, setSelectedPaymentOrder] = useState<FrontendOrder | null>(null);
   const addItem = useCartStore((state) => state.addItem);
   const openCart = useUIStore((state) => state.openCart);
   const navigate = useNavigate();
@@ -180,9 +183,30 @@ export const AccountPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="text-right shrink-0">
+                  <div className="text-right shrink-0 flex flex-col items-end gap-1">
                     <span className="text-accent-lime font-bold block">{formatIDR(ord.totalIdr)}</span>
-                    <span className="text-[10px] text-amber-400 uppercase block">{ord.paymentStatus}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded uppercase border block font-bold ${
+                        ord.paymentStatus === 'paid'
+                          ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                          : ord.paymentStatus === 'failed'
+                          ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+                          : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                      }`}
+                    >
+                      {ord.paymentStatus}
+                    </span>
+
+                    {ord.status === 'pending' && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPaymentOrder(ord)}
+                        className="mt-1 px-2.5 py-1 rounded-sm bg-accent-lime/20 hover:bg-accent-lime text-accent-lime hover:text-obsidian text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1 transition-colors border border-accent-lime/40"
+                      >
+                        <CreditCard className="w-3 h-3" />
+                        <span>{isId ? 'Bayar / Simulasi' : 'Pay / Simulate'}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -307,6 +331,17 @@ export const AccountPage: React.FC = () => {
         </div>
         <span className="text-[10px] text-muted-light/60">NOVAÉ ATELIER v1.2</span>
       </div>
+
+      {/* Simulated Payment Modal */}
+      <SimulatedPaymentModal
+        isOpen={!!selectedPaymentOrder}
+        onClose={() => setSelectedPaymentOrder(null)}
+        order={selectedPaymentOrder}
+        onPaymentUpdated={(updated) => {
+          setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+          setSelectedPaymentOrder(updated);
+        }}
+      />
     </div>
   );
 };

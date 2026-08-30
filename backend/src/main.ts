@@ -19,6 +19,8 @@ async function bootstrap() {
   const port = configService.get<number>('port') || 3001;
   const apiPrefix = configService.get<string>('apiPrefix') || 'api/v1';
   const corsOrigins = configService.get<string[]>('cors.origins') || [
+    'http://localhost:3000',
+    'http://localhost:3002',
     'http://localhost:5173',
     'http://localhost:5174',
   ];

@@ -19,6 +19,7 @@ import {
 } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/order-requests.dto';
+import { SimulatePaymentDto } from './dto/simulate-payment.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -79,5 +80,30 @@ export class OrdersController {
     @Query('lang') lang?: LanguageCode,
   ): Promise<OrderResponseDto> {
     return this.ordersService.getOrderById(user, orderId, lang);
+  }
+
+  @Post(':id/simulate-payment')
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Simulate customer payment outcome (Success, Failed, Cancel)',
+    description:
+      'Processes simulated payment for an order. On success, transitions order to paid. On failed, records payment failure. On cancel, releases reserved inventory.',
+  })
+  @ApiParam({ name: 'id', description: 'Order UUID' })
+  @ApiQuery({ name: 'lang', enum: LanguageCode, required: false, description: 'Language code (default: id)' })
+  @ApiResponse({ status: 200, description: 'Payment simulated successfully', type: OrderResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid payment scenario or order state' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden access to non-owned order' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  async simulatePayment(
+    @CurrentUser() user: User,
+    @Param('id') orderId: string,
+    @Body() dto: SimulatePaymentDto,
+    @Query('lang') lang?: LanguageCode,
+  ): Promise<OrderResponseDto> {
+    return this.ordersService.simulatePayment(user, orderId, dto, lang);
   }
 }

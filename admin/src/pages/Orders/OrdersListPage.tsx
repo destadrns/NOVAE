@@ -252,9 +252,18 @@ export const OrdersListPage: React.FC = () => {
                     {formatIDR(order.totalIdr)}
                   </TableCell>
                   <TableCell>
-                    <span className="font-mono text-[10px] text-muted uppercase">
-                      {order.paymentStatus}
-                    </span>
+                    <Badge
+                      variant={
+                        order.paymentStatus === 'paid'
+                          ? 'emerald'
+                          : order.paymentStatus === 'pending'
+                          ? 'amber'
+                          : 'rose'
+                      }
+                      size="sm"
+                    >
+                      {order.paymentStatus.toUpperCase()}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant={statusConfig.variant} size="sm">
@@ -436,22 +445,35 @@ export const OrdersListPage: React.FC = () => {
             {/* Payment Info */}
             {inspectOrder.payments.length > 0 && (
               <div className="p-3.5 bg-surface border border-surface-border rounded-sm space-y-2.5">
-                <h4 className="text-[11px] font-mono uppercase tracking-widest text-muted font-semibold flex items-center gap-1.5">
-                  <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Payment</span>
+                <h4 className="text-[11px] font-mono uppercase tracking-widest text-muted font-semibold flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Payment & Settlement</span>
+                  </div>
+                  <span className="text-[10px] text-muted-light font-mono font-normal">
+                    Order: {inspectOrder.paymentStatus.toUpperCase()}
+                  </span>
                 </h4>
                 {inspectOrder.payments.map((p) => (
-                  <div key={p.id} className="flex justify-between text-xs font-mono">
-                    <div>
-                      <span className="text-bone uppercase">{p.provider}</span>
-                      {p.method && <span className="text-muted ml-2">({p.method})</span>}
+                  <div key={p.id} className="p-2.5 bg-charcoal-dark border border-surface-border rounded-sm space-y-1.5 text-xs font-mono">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-bone font-bold uppercase">{p.method || p.provider}</span>
+                        <span className="text-muted text-[10px] ml-2">({p.provider})</span>
+                      </div>
+                      <Badge
+                        variant={p.status === 'paid' ? 'emerald' : p.status === 'pending' ? 'amber' : 'rose'}
+                        size="sm"
+                      >
+                        {p.status.toUpperCase()}
+                      </Badge>
                     </div>
-                    <Badge
-                      variant={p.status === 'paid' ? 'emerald' : p.status === 'pending' ? 'amber' : 'rose'}
-                      size="sm"
-                    >
-                      {p.status.toUpperCase()}
-                    </Badge>
+                    <div className="flex justify-between text-[11px] text-muted-light pt-0.5 border-t border-surface-border/50">
+                      <span>Amount: <strong className="text-bone">{formatIDR(p.amountIdr)}</strong></span>
+                      {p.paidAt && (
+                        <span className="text-emerald-400">Paid: {formatDateTime(p.paidAt)}</span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

@@ -5,7 +5,7 @@ export default () => ({
     url: process.env.DATABASE_URL || 'postgresql://novae:novae_secret@localhost:5432/novae_dev',
   },
   cors: {
-    origins: (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174')
+    origins: (process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:3002,http://localhost:5173,http://localhost:5174')
       .split(',')
       .map((origin) => origin.trim()),
   },

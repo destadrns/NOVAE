@@ -77,6 +77,16 @@ export class CreateOrderDto {
   @IsNotEmpty()
   shippingMethod: string;
 
+  @ApiPropertyOptional({
+    description: 'Selected simulated payment method',
+    enum: ['bca_va', 'mandiri_va', 'qris', 'credit_card', 'manual_transfer'],
+    example: 'bca_va',
+    default: 'bca_va',
+  })
+  @IsString()
+  @IsOptional()
+  paymentMethod?: string;
+
   @ApiPropertyOptional({ description: 'Customer notes or special requests', example: 'Gift packaging requested' })
   @IsString()
   @IsOptional()

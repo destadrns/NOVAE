@@ -248,7 +248,17 @@ export interface CreateOrderPayload {
     saveAddress?: boolean;
   };
   shippingMethod: string;
+  paymentMethod?: string;
   customerNotes?: string;
+}
+
+export interface FrontendPayment {
+  id: string;
+  provider: string;
+  method?: string | null;
+  amountIdr: number;
+  status: string;
+  paidAt?: string | null;
 }
 
 export interface FrontendOrderItem {
@@ -280,6 +290,7 @@ export interface FrontendOrder {
   customerEmail: string;
   shippingAddress: any;
   items: FrontendOrderItem[];
+  payments?: FrontendPayment[];
   placedAt?: string | null;
   createdAt: string;
 }
@@ -297,6 +308,23 @@ export async function apiGetUserOrders(token: string, lang: string = 'id') {
 
 export async function apiGetOrderById(token: string, orderId: string, lang: string = 'id') {
   return fetchWithAuth<FrontendOrder>(`/orders/${orderId}?lang=${lang}`, token);
+}
+
+export interface SimulatePaymentPayload {
+  scenario: 'success' | 'failed' | 'cancel';
+  method?: string;
+}
+
+export async function apiSimulatePayment(
+  token: string,
+  orderId: string,
+  payload: SimulatePaymentPayload,
+  lang: string = 'id',
+) {
+  return fetchWithAuth<FrontendOrder>(`/orders/${orderId}/simulate-payment?lang=${lang}`, token, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 

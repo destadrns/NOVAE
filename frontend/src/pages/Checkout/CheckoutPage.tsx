@@ -12,12 +12,16 @@ import {
   Edit2,
   Package,
   Clock,
+  CreditCard,
+  Building2,
+  QrCode,
 } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTranslation } from '@/i18n/useTranslation';
 import { formatIDR } from '@/lib/formatters';
 import { apiCreateOrder, FrontendOrder } from '@/lib/api';
+import { SimulatedPaymentModal } from '@/components/payment/SimulatedPaymentModal';
 
 interface ShippingAddress {
   fullName: string;
@@ -52,6 +56,8 @@ export const CheckoutPage: React.FC = () => {
   // Active step: 1 = Address, 2 = Courier, 3 = Order Review
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [shippingMethod, setShippingMethod] = useState<ShippingMethodId>('standard');
+  const [paymentMethod, setPaymentMethod] = useState<'bca_va' | 'mandiri_va' | 'qris' | 'credit_card' | 'manual_transfer'>('bca_va');
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [reviewConfirmed, setReviewConfirmed] = useState<boolean>(false);
@@ -179,6 +185,7 @@ export const CheckoutPage: React.FC = () => {
           saveAddress: address.saveAddress,
         },
         shippingMethod,
+        paymentMethod,
         customerNotes: address.notes,
       },
       language,
@@ -196,6 +203,7 @@ export const CheckoutPage: React.FC = () => {
 
     setConfirmedOrder(data);
     setReviewConfirmed(true);
+    setIsPaymentModalOpen(true);
     clearCart();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -600,14 +608,38 @@ export const CheckoutPage: React.FC = () => {
                         </p>
                       </div>
 
-                      <div className="p-4 bg-obsidian border border-white/10 rounded-sm text-xs font-mono space-y-2 text-left">
+                      <div className="p-4 bg-obsidian border border-white/10 rounded-sm text-xs font-mono space-y-2.5 text-left">
                         <div className="flex justify-between border-b border-white/10 pb-2">
                           <span className="text-muted">Total Pembayaran:</span>
                           <span className="text-accent-lime font-bold">{formatIDR(confirmedOrder.totalIdr)}</span>
                         </div>
-                        <div className="flex justify-between border-b border-white/10 pb-2">
+                        <div className="flex justify-between border-b border-white/10 pb-2 items-center">
                           <span className="text-muted">Status Pembayaran:</span>
-                          <span className="text-amber-400 uppercase font-bold">{confirmedOrder.paymentStatus}</span>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase border ${
+                              confirmedOrder.paymentStatus === 'paid'
+                                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                                : confirmedOrder.paymentStatus === 'failed'
+                                ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+                                : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                            }`}
+                          >
+                            {confirmedOrder.paymentStatus}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/10 pb-2 items-center">
+                          <span className="text-muted">Status Pesanan:</span>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase border ${
+                              confirmedOrder.status === 'paid'
+                                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                                : confirmedOrder.status === 'cancelled'
+                                ? 'bg-zinc-500/10 text-zinc-300 border-zinc-500/30'
+                                : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                            }`}
+                          >
+                            {confirmedOrder.status}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted">Tujuan Pengiriman:</span>
@@ -615,18 +647,42 @@ export const CheckoutPage: React.FC = () => {
                         </div>
                       </div>
 
+                      {/* Payment Simulator Trigger Button for Pending/Failed Orders */}
+                      {confirmedOrder.status === 'pending' && (
+                        <div className="p-4 bg-obsidian/90 border border-accent-lime/30 rounded-sm space-y-3">
+                          <div className="flex items-center justify-between text-xs font-mono">
+                            <span className="text-accent-lime font-bold uppercase tracking-wider flex items-center gap-1.5">
+                              <CreditCard className="w-4 h-4" />
+                              <span>Simulasi Pembayaran Terbuka</span>
+                            </span>
+                            <span className="text-[10px] text-muted">Sandbox Mode</span>
+                          </div>
+                          <p className="text-[11px] font-mono text-muted-light text-left leading-relaxed">
+                            Uji transaksi pembayaran sekarang dengan memilih skenario Sukses, Gagal, atau Batalkan pesanan.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setIsPaymentModalOpen(true)}
+                            className="w-full py-3 bg-accent-lime hover:bg-bone text-obsidian font-mono font-bold text-xs uppercase tracking-widest transition-colors flex items-center justify-center gap-2 shadow-lg"
+                          >
+                            <CreditCard className="w-4 h-4" />
+                            <span>BUKA SIMULATOR PEMBAYARAN →</span>
+                          </button>
+                        </div>
+                      )}
+
                       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                         <button
                           type="button"
                           onClick={() => navigate('/account')}
-                          className="w-full sm:w-auto px-6 py-3.5 bg-accent-lime hover:bg-bone text-obsidian font-bold text-xs font-mono uppercase tracking-widest transition-colors"
+                          className="w-full sm:w-auto px-6 py-3.5 bg-white/10 hover:bg-white/20 text-bone font-bold text-xs font-mono uppercase tracking-widest transition-colors"
                         >
                           LIHAT DI RIWAYAT AKUN →
                         </button>
                         <button
                           type="button"
                           onClick={() => navigate('/shop')}
-                          className="w-full sm:w-auto px-6 py-3.5 bg-white/10 hover:bg-white/20 text-bone font-mono text-xs uppercase tracking-widest transition-colors"
+                          className="w-full sm:w-auto px-6 py-3.5 bg-white/5 hover:bg-white/10 text-muted-light hover:text-bone font-mono text-xs uppercase tracking-widest transition-colors"
                         >
                           JELAJAHI KATALOG
                         </button>
@@ -700,6 +756,70 @@ export const CheckoutPage: React.FC = () => {
                           <span className="text-bone font-bold">
                             {selectedCourier.price === 0 ? t.checkout.methods.standardFree : formatIDR(selectedCourier.price)}
                           </span>
+                        </div>
+                      </div>
+
+                      {/* Payment Method Selection */}
+                      <div className="p-6 bg-charcoal border border-white/10 rounded-sm space-y-4">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                          <h3 className="text-xs font-mono uppercase tracking-widest text-accent-lime flex items-center gap-2">
+                            <CreditCard className="w-4 h-4" />
+                            <span>METODE PEMBAYARAN (SIMULASI)</span>
+                          </h3>
+                          <span className="text-[10px] font-mono text-muted">Sandbox API</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {[
+                            {
+                              id: 'bca_va' as const,
+                              name: 'BCA Virtual Account',
+                              desc: 'Verifikasi instan otomatis 24 jam',
+                              icon: <Building2 className="w-4 h-4 text-accent-lime" />,
+                            },
+                            {
+                              id: 'mandiri_va' as const,
+                              name: 'Mandiri Virtual Account',
+                              desc: 'Transfer via Livin by Mandiri & ATM',
+                              icon: <Building2 className="w-4 h-4 text-cyan-400" />,
+                            },
+                            {
+                              id: 'qris' as const,
+                              name: 'QRIS / Digital Wallet',
+                              desc: 'GoPay, OVO, ShopeePay, Dana, BCA',
+                              icon: <QrCode className="w-4 h-4 text-emerald-400" />,
+                            },
+                            {
+                              id: 'credit_card' as const,
+                              name: 'Kartu Kredit / Debit Online',
+                              desc: 'Visa, Mastercard, JCB 3D Secure',
+                              icon: <CreditCard className="w-4 h-4 text-amber-400" />,
+                            },
+                          ].map((pm) => {
+                            const isSelected = paymentMethod === pm.id;
+                            return (
+                              <button
+                                key={pm.id}
+                                type="button"
+                                onClick={() => setPaymentMethod(pm.id)}
+                                className={`p-3 rounded-sm border text-left flex items-start gap-3 transition-all ${
+                                  isSelected
+                                    ? 'bg-obsidian border-accent-lime text-bone shadow-md'
+                                    : 'bg-obsidian/40 border-white/10 text-muted-light hover:border-white/20'
+                                }`}
+                              >
+                                <div className="mt-0.5 shrink-0">{pm.icon}</div>
+                                <div className="min-w-0">
+                                  <span className="text-xs font-mono font-bold block text-bone truncate">
+                                    {pm.name}
+                                  </span>
+                                  <span className="text-[10px] text-muted block mt-0.5 line-clamp-1">
+                                    {pm.desc}
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -866,6 +986,15 @@ export const CheckoutPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Simulated Payment Modal */}
+      <SimulatedPaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        order={confirmedOrder}
+        onPaymentSuccess={(updated) => setConfirmedOrder(updated)}
+        onPaymentUpdated={(updated) => setConfirmedOrder(updated)}
+      />
     </div>
   );
 };

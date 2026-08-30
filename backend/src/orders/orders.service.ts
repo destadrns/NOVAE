@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { CreateOrderDto } from './dto/order-requests.dto';
 import { OrderResponseDto, OrderItemResponseDto } from './dto/order-response.dto';
+import { SimulatePaymentDto, PaymentScenario } from './dto/simulate-payment.dto';
 import {
   User,
   UserRole,
@@ -86,6 +87,15 @@ export class OrdersService {
       };
     });
 
+    const payments = (order.payments || []).map((p: any) => ({
+      id: p.id,
+      provider: p.provider,
+      method: p.method,
+      amountIdr: Number(p.amountIdr),
+      status: p.status,
+      paidAt: p.paidAt,
+    }));
+
     return {
       id: order.id,
       orderNumber: order.orderNumber,
@@ -101,6 +111,7 @@ export class OrdersService {
       customerEmail: order.customerEmail,
       shippingAddress: order.shippingAddressSnapshot,
       items,
+      payments: payments.length > 0 ? payments : undefined,
       placedAt: order.placedAt,
       createdAt: order.createdAt,
     };
@@ -291,7 +302,7 @@ export class OrdersService {
           provider: 'manual',
           amountIdr: totalBigInt,
           status: PaymentStatus.pending,
-          method: 'PENDING_SELECTION',
+          method: dto.paymentMethod || 'bca_va',
         },
       });
 
@@ -362,6 +373,7 @@ export class OrdersService {
               variant: { include: { images: true } },
             },
           },
+          payments: true,
         },
       });
     });
@@ -387,6 +399,7 @@ export class OrdersService {
             variant: { include: { images: true } },
           },
         },
+        payments: true,
       },
     });
 
@@ -417,11 +430,188 @@ export class OrdersService {
             variant: { include: { images: true } },
           },
         },
+        payments: true,
       },
       orderBy: { createdAt: 'desc' },
     });
 
     return orders.map((o) => this.formatOrder(o, language));
+  }
+
+  /**
+   * Simulates customer payment transaction outcome (Success, Failed, Cancel)
+   */
+  async simulatePayment(
+    user: User,
+    orderId: string,
+    dto: SimulatePaymentDto,
+    language: LanguageCode = LanguageCode.id,
+  ): Promise<OrderResponseDto> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: true,
+        payments: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} not found`);
+    }
+
+    if (order.userId !== user.id && user.role !== UserRole.admin) {
+      throw new ForbiddenException('You do not have permission to pay for this order');
+    }
+
+    if (order.status === OrderStatus.paid) {
+      throw new BadRequestException('Order is already paid');
+    }
+    if (order.status === OrderStatus.cancelled) {
+      throw new BadRequestException('Cannot process payment for a cancelled order');
+    }
+    if (order.status !== OrderStatus.pending) {
+      throw new BadRequestException(`Cannot process payment for order in "${order.status}" status`);
+    }
+
+    const updatedOrder = await this.prisma.$transaction(async (tx) => {
+      const selectedMethod = dto.method || order.payments?.[0]?.method || 'bca_va';
+
+      if (dto.scenario === PaymentScenario.SUCCESS) {
+        if (order.payments && order.payments.length > 0) {
+          await tx.payment.updateMany({
+            where: { orderId: order.id },
+            data: {
+              status: PaymentStatus.paid,
+              method: selectedMethod,
+              paidAt: new Date(),
+            },
+          });
+        } else {
+          await tx.payment.create({
+            data: {
+              orderId: order.id,
+              provider: 'manual',
+              method: selectedMethod,
+              amountIdr: order.totalIdr,
+              status: PaymentStatus.paid,
+              paidAt: new Date(),
+            },
+          });
+        }
+
+        await tx.order.update({
+          where: { id: order.id },
+          data: {
+            status: OrderStatus.paid,
+            paymentStatus: PaymentStatus.paid,
+          },
+        });
+
+        await tx.orderStatusHistory.create({
+          data: {
+            orderId: order.id,
+            fromStatus: order.status,
+            toStatus: OrderStatus.paid,
+            note: `Simulated payment successful via ${selectedMethod}`,
+            changedBy: user.id,
+          },
+        });
+      } else if (dto.scenario === PaymentScenario.FAILED) {
+        if (order.payments && order.payments.length > 0) {
+          await tx.payment.updateMany({
+            where: { orderId: order.id },
+            data: {
+              status: PaymentStatus.failed,
+              method: selectedMethod,
+            },
+          });
+        }
+
+        await tx.order.update({
+          where: { id: order.id },
+          data: {
+            paymentStatus: PaymentStatus.failed,
+          },
+        });
+
+        await tx.orderStatusHistory.create({
+          data: {
+            orderId: order.id,
+            fromStatus: order.status,
+            toStatus: order.status,
+            note: `Simulated payment failed (declined/insufficient balance) via ${selectedMethod}`,
+            changedBy: user.id,
+          },
+        });
+      } else if (dto.scenario === PaymentScenario.CANCEL) {
+        if (order.payments && order.payments.length > 0) {
+          await tx.payment.updateMany({
+            where: { orderId: order.id },
+            data: {
+              status: PaymentStatus.failed,
+              method: selectedMethod,
+            },
+          });
+        }
+
+        await tx.order.update({
+          where: { id: order.id },
+          data: {
+            status: OrderStatus.cancelled,
+            paymentStatus: PaymentStatus.failed,
+            fulfillmentStatus: FulfillmentStatus.cancelled,
+          },
+        });
+
+        for (const item of order.items) {
+          await tx.inventory.update({
+            where: { variantId: item.variantId },
+            data: { reservedQuantity: { decrement: item.quantity } },
+          });
+
+          await tx.inventoryMovement.create({
+            data: {
+              variantId: item.variantId,
+              movementType: InventoryMovementType.release,
+              quantityDelta: -item.quantity,
+              referenceType: 'order',
+              referenceId: order.id,
+              note: `Released ${item.quantity} pieces — order ${order.orderNumber} payment cancelled by customer`,
+              createdBy: user.id,
+            },
+          });
+        }
+
+        await tx.orderStatusHistory.create({
+          data: {
+            orderId: order.id,
+            fromStatus: order.status,
+            toStatus: OrderStatus.cancelled,
+            note: 'Payment cancelled by customer during checkout simulation',
+            changedBy: user.id,
+          },
+        });
+      }
+
+      return tx.order.findUnique({
+        where: { id: order.id },
+        include: {
+          items: {
+            include: {
+              product: { include: { images: true } },
+              variant: { include: { images: true } },
+            },
+          },
+          payments: true,
+        },
+      });
+    });
+
+    this.logger.log(
+      `Simulated payment for order ${updatedOrder?.orderNumber}: scenario=${dto.scenario} (User: ${user.email})`,
+    );
+
+    return this.formatOrder(updatedOrder, language);
   }
 
   // ==================================================================

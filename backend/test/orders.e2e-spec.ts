@@ -442,4 +442,147 @@ describe('NOVAÉ Orders (e2e)', () => {
         .expect(404);
     });
   });
+
+  describe('POST /api/v1/orders/:id/simulate-payment', () => {
+    const targetOrderId = '00000000-0000-0000-0004-000000000001';
+
+    const pendingOrderFixture = {
+      id: targetOrderId,
+      orderNumber: 'NOV-2026-0109',
+      userId: mockCustomer.id,
+      customerEmail: mockCustomer.email,
+      status: OrderStatus.pending,
+      paymentStatus: PaymentStatus.pending,
+      fulfillmentStatus: FulfillmentStatus.unfulfilled,
+      subtotalIdr: 1850000n,
+      shippingIdr: 0n,
+      taxIdr: 0n,
+      discountIdr: 0n,
+      totalIdr: 1850000n,
+      currency: 'IDR',
+      shippingAddressSnapshot: mockOrderDto.shippingAddress,
+      items: [
+        {
+          id: 'item-1',
+          variantId: mockVariant.id,
+          quantity: 1,
+          unitPriceIdr: 1850000n,
+          lineTotalIdr: 1850000n,
+          productNameSnapshot: 'Oversized Form Jacket (ID)',
+          skuSnapshot: mockVariant.sku,
+        },
+      ],
+      payments: [
+        {
+          id: 'pay-1',
+          provider: 'manual',
+          method: 'bca_va',
+          amountIdr: 1850000n,
+          status: PaymentStatus.pending,
+          paidAt: null,
+        },
+      ],
+      createdAt: new Date(),
+    };
+
+    it('should successfully simulate payment for customer order (success scenario)', async () => {
+      mockPrisma.order.findUnique
+        .mockResolvedValueOnce(pendingOrderFixture)
+        .mockResolvedValueOnce({
+          ...pendingOrderFixture,
+          status: OrderStatus.paid,
+          paymentStatus: PaymentStatus.paid,
+          payments: [{ ...pendingOrderFixture.payments[0], status: PaymentStatus.paid, paidAt: new Date() }],
+        });
+
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/orders/${targetOrderId}/simulate-payment`)
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          scenario: 'success',
+          method: 'bca_va',
+        })
+        .expect(200);
+
+      expect(response.body.id).toBe(targetOrderId);
+      expect(response.body.status).toBe(OrderStatus.paid);
+      expect(response.body.paymentStatus).toBe(PaymentStatus.paid);
+    });
+
+    it('should simulate payment failure (failed scenario) without cancelling order', async () => {
+      mockPrisma.order.findUnique
+        .mockResolvedValueOnce(pendingOrderFixture)
+        .mockResolvedValueOnce({
+          ...pendingOrderFixture,
+          status: OrderStatus.pending,
+          paymentStatus: PaymentStatus.failed,
+          payments: [{ ...pendingOrderFixture.payments[0], status: PaymentStatus.failed }],
+        });
+
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/orders/${targetOrderId}/simulate-payment`)
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          scenario: 'failed',
+          method: 'credit_card',
+        })
+        .expect(200);
+
+      expect(response.body.status).toBe(OrderStatus.pending);
+      expect(response.body.paymentStatus).toBe(PaymentStatus.failed);
+    });
+
+    it('should simulate payment cancellation and release reserved inventory (cancel scenario)', async () => {
+      mockPrisma.order.findUnique
+        .mockResolvedValueOnce(pendingOrderFixture)
+        .mockResolvedValueOnce({
+          ...pendingOrderFixture,
+          status: OrderStatus.cancelled,
+          paymentStatus: PaymentStatus.failed,
+          fulfillmentStatus: FulfillmentStatus.cancelled,
+        });
+
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/orders/${targetOrderId}/simulate-payment`)
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          scenario: 'cancel',
+        })
+        .expect(200);
+
+      expect(response.body.status).toBe(OrderStatus.cancelled);
+      expect(response.body.paymentStatus).toBe(PaymentStatus.failed);
+    });
+
+    it('should reject payment simulation when another customer tries to pay', async () => {
+      mockPrisma.order.findUnique.mockResolvedValueOnce(pendingOrderFixture);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/orders/${targetOrderId}/simulate-payment`)
+        .set('Authorization', `Bearer ${otherCustomerToken}`)
+        .send({
+          scenario: 'success',
+        })
+        .expect(403);
+    });
+
+    it('should return 401 Unauthorized without auth token', async () => {
+      await request(app.getHttpServer())
+        .post(`/api/v1/orders/${targetOrderId}/simulate-payment`)
+        .send({
+          scenario: 'success',
+        })
+        .expect(401);
+    });
+
+    it('should return 400 Bad Request with invalid scenario', async () => {
+      await request(app.getHttpServer())
+        .post(`/api/v1/orders/${targetOrderId}/simulate-payment`)
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          scenario: 'invalid_scenario',
+        })
+        .expect(400);
+    });
+  });
 });

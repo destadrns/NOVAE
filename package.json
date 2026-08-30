@@ -16,7 +16,8 @@
     "dev:admin": "npm --prefix admin run dev",
     "build:admin": "npm --prefix admin run build",
     "preview:admin": "npm --prefix admin run preview",
-    "dev:backend": "npm --prefix backend run dev"
+    "dev:backend": "npm --prefix backend run dev",
+    "build:backend": "npm --prefix backend run build"
   },
   "keywords": [
     "novae",
