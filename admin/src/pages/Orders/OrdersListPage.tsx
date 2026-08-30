@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAdminAuthStore } from '@/store/useAdminAuthStore';
 import { useAdminUIStore } from '@/store/useAdminUIStore';
 import { useAdminTranslation } from '@/i18n/useAdminTranslation';
 import { formatIDR, formatDateTime, getOrderStatusVariant } from '@/lib/formatters';
@@ -38,6 +39,7 @@ import {
 } from 'lucide-react';
 
 export const OrdersListPage: React.FC = () => {
+  const { token } = useAdminAuthStore();
   const { addToast } = useAdminUIStore();
   const { t, format } = useAdminTranslation();
 
@@ -58,8 +60,6 @@ export const OrdersListPage: React.FC = () => {
   const [trackingNumber, setTrackingNumber] = useState('');
   const [statusNote, setStatusNote] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
-
-  const token = localStorage.getItem('novae_admin_token');
 
   const statuses = [
     { label: t.orders.allOrders, value: 'ALL' },
