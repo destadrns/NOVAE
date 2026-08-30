@@ -1,73 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { COLLECTIONS, Collection } from '@/data/collections';
-import { PRODUCTS, Product } from '@/data/products';
 import { ProductCard } from '@/components/products/ProductCard';
 import { ArrowRight } from 'lucide-react';
 import { useTranslation } from '@/i18n/useTranslation';
-import { useLanguageStore } from '@/store/useLanguageStore';
-import { apiGetCollections, apiGetProducts, mapApiProductToFrontend } from '@/lib/api';
+import { useCatalogStore } from '@/store/useCatalogStore';
 
 export const CollectionsPage: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
   const { t, getLocalizedCollection, getLocalizedProduct } = useTranslation();
-  const { language } = useLanguageStore();
-
-  const [liveCollections, setLiveCollections] = useState<Collection[]>(COLLECTIONS);
-  const [liveProducts, setLiveProducts] = useState<Product[]>(PRODUCTS);
-
-  useEffect(() => {
-    let isMounted = true;
-    async function loadData() {
-      const [colRes, prodRes] = await Promise.all([
-        apiGetCollections(language),
-        apiGetProducts({ lang: language }),
-      ]);
-
-      if (isMounted) {
-        if (colRes.data && Array.isArray(colRes.data) && colRes.data.length > 0) {
-          const mappedCols: Collection[] = colRes.data.map((c) => {
-            const fallback = COLLECTIONS.find(
-              (fc) =>
-                fc.id.toLowerCase() === c.slug.toLowerCase() ||
-                fc.code.toLowerCase() === c.code.toLowerCase() ||
-                fc.name.toLowerCase() === c.name.toLowerCase(),
-            );
-            return {
-              id: c.slug || c.id,
-              code: c.code || fallback?.code || '01',
-              name: c.name || fallback?.name || c.code,
-              description: c.description || fallback?.description || '',
-              tagline: fallback?.tagline || 'Crafted series.',
-              accentQuote: fallback?.accentQuote || 'Define your own form.',
-              heroImage: c.coverImageUrl || fallback?.heroImage || 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=800',
-              detailImage: fallback?.detailImage || 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=800',
-              productCount: fallback?.productCount || 6,
-              featuredSlug: fallback?.featuredSlug || 'oversized-form-jacket',
-              materialSpec: fallback?.materialSpec || 'Curated Atelier Materials',
-              silhouetteSpec: fallback?.silhouetteSpec || 'Sculptural Tailoring',
-              paletteSpec: fallback?.paletteSpec || 'Obsidian • Raw Stone • Slate',
-              location: fallback?.location || 'ATELIER NOVAE // ARCHIVE',
-            };
-          });
-          setLiveCollections(mappedCols);
-        }
-
-        const rawProdList = Array.isArray((prodRes.data as any)?.data)
-          ? (prodRes.data as any).data
-          : (Array.isArray((prodRes.data as any)?.items) ? (prodRes.data as any).items : (Array.isArray(prodRes.data) ? prodRes.data : null));
-
-        if (rawProdList && rawProdList.length > 0) {
-          setLiveProducts(rawProdList.map(mapApiProductToFrontend));
-        }
-      }
-    }
-
-    loadData();
-    return () => {
-      isMounted = false;
-    };
-  }, [language]);
+  const liveCollections = useCatalogStore((state) => state.collections);
+  const liveProducts = useCatalogStore((state) => state.products);
 
   const rawSelectedCol = id
     ? liveCollections.find(

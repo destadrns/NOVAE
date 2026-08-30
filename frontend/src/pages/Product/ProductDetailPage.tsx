@@ -8,14 +8,19 @@ import { useWishlistStore } from '@/store/useWishlistStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
+import { useCatalogStore } from '@/store/useCatalogStore';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useTranslation } from '@/i18n/useTranslation';
 import { apiGetProductBySlug, mapApiProductToFrontend } from '@/lib/api';
 
 export const ProductDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  const storeProducts = useCatalogStore((state) => state.products);
+  const matchedFromStore = storeProducts.find((p) => p.slug === slug);
   const fallbackProduct = PRODUCTS.find((p) => p.slug === slug) || PRODUCTS[0];
-  const [rawProduct, setRawProduct] = useState<Product>(fallbackProduct);
+  const initialProduct = matchedFromStore || fallbackProduct;
+
+  const [rawProduct, setRawProduct] = useState<Product>(initialProduct);
   const { t, getLocalizedProduct } = useTranslation();
   const { language } = useLanguageStore();
   const product = getLocalizedProduct(rawProduct);

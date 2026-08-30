@@ -9,13 +9,21 @@ import { SearchModal } from '@/components/layout/SearchModal';
 import { MobileMenu } from '@/components/layout/MobileMenu';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useLanguageStore } from '@/store/useLanguageStore';
+import { useCatalogStore } from '@/store/useCatalogStore';
 
 export const App: React.FC = () => {
   const { initAuth } = useAuthStore();
+  const { language } = useLanguageStore();
+  const { fetchCatalog } = useCatalogStore();
 
   useEffect(() => {
     initAuth();
   }, [initAuth]);
+
+  useEffect(() => {
+    fetchCatalog(language);
+  }, [language, fetchCatalog]);
   return (
     <BrowserRouter>
       <LenisProvider>

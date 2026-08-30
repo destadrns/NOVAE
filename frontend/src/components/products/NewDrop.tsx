@@ -1,31 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Sparkles } from 'lucide-react';
-import { PRODUCTS, Product } from '@/data/products';
 import { ProductCard } from './ProductCard';
 import { useTranslation } from '@/i18n/useTranslation';
-import { useLanguageStore } from '@/store/useLanguageStore';
-import { apiGetProducts, mapApiProductToFrontend } from '@/lib/api';
+import { useCatalogStore } from '@/store/useCatalogStore';
 
 export const NewDrop: React.FC = () => {
   const { t, getLocalizedProduct } = useTranslation();
-  const { language } = useLanguageStore();
-  const [liveProducts, setLiveProducts] = useState<Product[]>(PRODUCTS);
-
-  useEffect(() => {
-    let isMounted = true;
-    apiGetProducts({ lang: language }).then(({ data }) => {
-      const rawList = Array.isArray((data as any)?.data)
-        ? (data as any).data
-        : (Array.isArray((data as any)?.items) ? (data as any).items : (Array.isArray(data) ? data : null));
-      if (isMounted && rawList && rawList.length > 0) {
-        setLiveProducts(rawList.map(mapApiProductToFrontend));
-      }
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, [language]);
+  const liveProducts = useCatalogStore((state) => state.products);
 
   const rawNewArrivals = liveProducts.filter((p) => p.newArrival || p.featured).slice(0, 4);
   const newArrivals = rawNewArrivals.map(getLocalizedProduct);
@@ -64,7 +46,7 @@ export const NewDrop: React.FC = () => {
               to="/shop"
               className="group inline-flex items-center gap-3 text-xs uppercase tracking-[0.25em] text-bone hover:text-accent-lime transition-colors py-2"
             >
-              <span>{t.newDrop.exploreAll.replace('{count}', String(PRODUCTS.length))}</span>
+              <span>{t.newDrop.exploreAll.replace('{count}', String(liveProducts.length))}</span>
               <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1.5 transition-transform text-accent-lime" />
             </Link>
           </div>

@@ -2,58 +2,19 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Sparkles, Compass, Eye } from 'lucide-react';
-import { COLLECTIONS, Collection } from '@/data/collections';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useTranslation } from '@/i18n/useTranslation';
-import { useLanguageStore } from '@/store/useLanguageStore';
-import { apiGetCollections } from '@/lib/api';
+import { useCatalogStore } from '@/store/useCatalogStore';
 
 gsap.registerPlugin(ScrollTrigger);
 
 export const CollectionsShowcase: React.FC = () => {
   const [activeTab, setActiveTab] = useState<number>(0);
   const { t, getLocalizedCollection } = useTranslation();
-  const { language } = useLanguageStore();
-  const [liveCollections, setLiveCollections] = useState<Collection[]>(COLLECTIONS);
+  const collections = useCatalogStore((state) => state.collections);
 
-  useEffect(() => {
-    let isMounted = true;
-    apiGetCollections(language).then(({ data }) => {
-      if (isMounted && data && Array.isArray(data) && data.length > 0) {
-        const mappedCols: Collection[] = data.map((c) => {
-          const fallback = COLLECTIONS.find(
-            (fc) =>
-              fc.id.toLowerCase() === c.slug.toLowerCase() ||
-              fc.code.toLowerCase() === c.code.toLowerCase() ||
-              fc.name.toLowerCase() === c.name.toLowerCase(),
-          );
-          return {
-            id: c.slug || c.id,
-            code: c.code || fallback?.code || '01',
-            name: c.name || fallback?.name || c.code,
-            description: c.description || fallback?.description || '',
-            tagline: fallback?.tagline || 'Crafted series.',
-            accentQuote: fallback?.accentQuote || 'Define your own form.',
-            heroImage: c.coverImageUrl || fallback?.heroImage || 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=800',
-            detailImage: fallback?.detailImage || 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=800',
-            productCount: fallback?.productCount || 6,
-            featuredSlug: fallback?.featuredSlug || 'oversized-form-jacket',
-            materialSpec: fallback?.materialSpec || 'Curated Atelier Materials',
-            silhouetteSpec: fallback?.silhouetteSpec || 'Sculptural Tailoring',
-            paletteSpec: fallback?.paletteSpec || 'Obsidian • Raw Stone • Slate',
-            location: fallback?.location || 'ATELIER NOVAE // ARCHIVE',
-          };
-        });
-        setLiveCollections(mappedCols);
-      }
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, [language]);
-
-  const rawCollection = liveCollections[activeTab] || liveCollections[0] || COLLECTIONS[0];
+  const rawCollection = collections[activeTab] || collections[0];
   const currentCollection = getLocalizedCollection(rawCollection);
 
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -121,7 +82,7 @@ export const CollectionsShowcase: React.FC = () => {
           aria-label="NOVAÉ Collection Series"
           className="grid grid-cols-3 gap-1.5 sm:gap-4 mb-10 sm:mb-12 border-b border-white/10 pb-4"
         >
-          {COLLECTIONS.map((col, index) => {
+          {collections.map((col, index) => {
             const locCol = getLocalizedCollection(col);
             const isActive = activeTab === index;
             return (
@@ -141,11 +102,11 @@ export const CollectionsShowcase: React.FC = () => {
                     SERIES {col.code}
                   </span>
                   <span className="text-[9px] font-mono text-muted-dark hidden md:inline">
-                    {t.collections.stylesCount.replace('{count}', String(col.productCount))}
+                    {t.collections.stylesCount.replace('{count}', String(col.productCount || 6))}
                   </span>
                 </div>
                 <span className="text-base sm:text-2xl md:text-3xl lg:text-4xl font-display font-black tracking-tight uppercase block">
-                  {col.name}
+                  {locCol.name || col.name}
                 </span>
                 <span className="text-[11px] text-muted-dark font-sans tracking-wider hidden lg:block mt-1 font-light truncate">
                   {locCol.tagline}

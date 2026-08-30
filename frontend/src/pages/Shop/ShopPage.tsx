@@ -1,39 +1,19 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { PRODUCTS, Product } from '@/data/products';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useTranslation } from '@/i18n/useTranslation';
-import { useLanguageStore } from '@/store/useLanguageStore';
-import { apiGetProducts, mapApiProductToFrontend } from '@/lib/api';
+import { useCatalogStore } from '@/store/useCatalogStore';
 
 export const ShopPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || 'All';
   const initialCollection = searchParams.get('collection') || 'All';
 
-  const [liveProducts, setLiveProducts] = useState<Product[]>(PRODUCTS);
+  const liveProducts = useCatalogStore((state) => state.products);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [selectedCollection, setSelectedCollection] = useState<string>(initialCollection);
   const [sortBy, setSortBy] = useState<string>('featured');
   const { t, getLocalizedProduct } = useTranslation();
-  const { language } = useLanguageStore();
-
-  useEffect(() => {
-    let isMounted = true;
-    async function loadProducts() {
-      const { data } = await apiGetProducts({ lang: language });
-      const rawList = Array.isArray((data as any)?.data)
-        ? (data as any).data
-        : (Array.isArray((data as any)?.items) ? (data as any).items : (Array.isArray(data) ? data : null));
-      if (isMounted && rawList && rawList.length > 0) {
-        setLiveProducts(rawList.map(mapApiProductToFrontend));
-      }
-    }
-    loadProducts();
-    return () => {
-      isMounted = false;
-    };
-  }, [language]);
 
   const categories = [
     { key: 'All', label: t.shop.categories.All },
@@ -80,7 +60,7 @@ export const ShopPage: React.FC = () => {
             </h1>
           </div>
           <span className="text-xs font-mono tracking-widest text-muted uppercase">
-            {t.shop.showing.replace('{count}', String(filteredProducts.length)).replace('{total}', String(PRODUCTS.length))}
+            {t.shop.showing.replace('{count}', String(filteredProducts.length)).replace('{total}', String(liveProducts.length))}
           </span>
         </div>
 
