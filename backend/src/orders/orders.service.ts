@@ -505,6 +505,35 @@ export class OrdersService {
   }
 
   /**
+   * Public tracking lookup by orderNumber (e.g. NOV-2026-0104)
+   */
+  async trackOrderByNumber(
+    orderNumber: string,
+    language: LanguageCode = LanguageCode.id,
+  ): Promise<OrderResponseDto> {
+    const order = await this.prisma.order.findUnique({
+      where: { orderNumber: orderNumber.trim() },
+      include: {
+        items: {
+          include: {
+            product: { include: { images: true } },
+            variant: { include: { images: true } },
+          },
+        },
+        payments: true,
+        shipment: true,
+        statusHistory: { orderBy: { createdAt: 'asc' } },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order with number '${orderNumber}' not found`);
+    }
+
+    return this.formatOrder(order, language);
+  }
+
+  /**
    * Simulates customer payment transaction outcome (Success, Failed, Cancel)
    */
   async simulatePayment(

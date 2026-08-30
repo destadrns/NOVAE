@@ -164,6 +164,82 @@ export const CustomerOrderDetailModal: React.FC<CustomerOrderDetailModalProps> =
             </div>
           )}
 
+          {/* Real-time Courier Tracking Checkpoints */}
+          {(order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered') && (
+            <div className="p-4 bg-obsidian/70 border border-cyan-500/20 rounded-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-wider text-cyan-400 font-bold flex items-center gap-1.5">
+                  <Truck className="w-3.5 h-3.5" />
+                  <span>{isId ? 'Titik Pelacakan Logistik Kurir' : 'Live Courier Checkpoints'}</span>
+                </span>
+                <span className="text-[9px] text-muted-light">
+                  {order.status === 'delivered'
+                    ? isId ? 'Paket Telah Tiba' : 'Delivered'
+                    : order.status === 'shipped'
+                    ? isId ? 'Estimasi Tiba: 1-2 Hari Kerja' : 'ETA: 1-2 Business Days'
+                    : isId ? 'Estimasi Selesai Jahit: 24 Jam' : 'Atelier Curation: 24 Hours'}
+                </span>
+              </div>
+
+              <div className="space-y-2 pt-1 border-t border-white/5">
+                {[
+                  {
+                    title: isId ? '1. Kurasi & Inspeksi Kualitas Atelier' : '1. Atelier Curation & Quality Inspection',
+                    desc: isId ? 'Pemeriksaan standar jahitan, presisi pola, dan sertifikasi arsip di Atelier Bandung.' : 'Pattern precision and archival certification verified at Bandung Atelier.',
+                    passed: true,
+                    active: order.status === 'processing',
+                  },
+                  {
+                    title: isId ? '2. Pengemasan Arsip & Serah Terima Kurir' : '2. Archival Packaging & Courier Handover',
+                    desc: isId ? `Kemasan proteksi bebas plastik diserahkan ke ${order.shipment?.courier || 'Kurir Logistik'}.` : `Protected packaging handed over to ${order.shipment?.courier || 'Logistics Courier'}.`,
+                    passed: order.status === 'shipped' || order.status === 'delivered',
+                    active: order.status === 'shipped',
+                  },
+                  {
+                    title: isId ? '3. Kurir Menuju Alamat Penerima' : '3. Out for Final Delivery',
+                    desc: isId ? `Kurir mengantarkan paket menuju ${order.shippingAddress?.city || 'kota tujuan'}.` : `Courier in transit to ${order.shippingAddress?.city || 'destination'}.`,
+                    passed: order.status === 'delivered',
+                    active: false,
+                  },
+                ].map((cp, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-2.5 rounded-sm border flex items-start gap-2.5 transition-all ${
+                      cp.active
+                        ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-200 shadow-sm'
+                        : cp.passed
+                        ? 'bg-white/5 border-white/10 text-bone'
+                        : 'bg-black/20 border-white/5 text-muted opacity-60'
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full mt-0.5 flex items-center justify-center shrink-0 text-[9px] font-bold ${
+                        cp.active
+                          ? 'bg-cyan-400 text-obsidian animate-pulse'
+                          : cp.passed
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-white/10 text-muted'
+                      }`}
+                    >
+                      {cp.passed ? '✓' : idx + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-[11px] leading-tight flex items-center justify-between">
+                        <span>{cp.title}</span>
+                        {cp.active && (
+                          <span className="text-[9px] uppercase px-1.5 py-0.2 bg-cyan-400 text-obsidian font-bold rounded">
+                            {isId ? 'Sedang Berjalan' : 'In Progress'}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-muted-light mt-0.5 leading-relaxed">{cp.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Stepper Status Lifecycle */}
           <div className="p-4 bg-obsidian/50 border border-white/10 rounded-sm space-y-4">
             <h3 className="text-[11px] font-mono font-bold uppercase tracking-widest text-muted-light flex items-center gap-2">

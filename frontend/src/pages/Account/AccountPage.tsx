@@ -7,7 +7,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatIDR } from '@/lib/formatters';
 import { PRODUCTS } from '@/data/products';
-import { apiGetUserOrders, FrontendOrder } from '@/lib/api';
+import { apiGetUserOrders, apiTrackOrder, FrontendOrder } from '@/lib/api';
 import {
   Mail,
   ShieldCheck,
@@ -23,6 +23,7 @@ import {
   Eye,
   Truck,
   Loader2,
+  Search,
 } from 'lucide-react';
 import { SimulatedPaymentModal } from '@/components/payment/SimulatedPaymentModal';
 import { CustomerOrderDetailModal } from '@/components/orders/CustomerOrderDetailModal';
@@ -36,6 +37,9 @@ export const AccountPage: React.FC = () => {
   const [orderFilter, setOrderFilter] = useState<'ALL' | 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ALL');
   const [selectedPaymentOrder, setSelectedPaymentOrder] = useState<FrontendOrder | null>(null);
   const [selectedDetailOrder, setSelectedDetailOrder] = useState<FrontendOrder | null>(null);
+  const [trackLookupInput, setTrackLookupInput] = useState('');
+  const [isSearchingTracking, setIsSearchingTracking] = useState(false);
+  const [trackingError, setTrackingError] = useState<string | null>(null);
   const addItem = useCartStore((state) => state.addItem);
   const openCart = useUIStore((state) => state.openCart);
   const navigate = useNavigate();
@@ -52,6 +56,26 @@ export const AccountPage: React.FC = () => {
       setIsLoadingOrders(false);
     }
   }, [token, language]);
+
+  const handleTrackLookup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!trackLookupInput.trim()) return;
+    setIsSearchingTracking(true);
+    setTrackingError(null);
+    try {
+      const { data } = await apiTrackOrder(trackLookupInput.trim(), language);
+      if (data) {
+        setSelectedDetailOrder(data);
+        setTrackLookupInput('');
+      } else {
+        setTrackingError(isId ? `Pesanan '${trackLookupInput}' tidak ditemukan.` : `Order '${trackLookupInput}' not found.`);
+      }
+    } catch {
+      setTrackingError(isId ? 'Gagal melacak pesanan.' : 'Failed to track order.');
+    } finally {
+      setIsSearchingTracking(false);
+    }
+  };
 
   useEffect(() => {
     if (token) {
@@ -167,7 +191,7 @@ export const AccountPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
             <div className="flex items-center gap-2 text-bone text-sm font-mono font-bold uppercase tracking-wider">
               <Package className="w-4 h-4 text-accent-lime" />
-              <span>{isId ? 'Riwayat Pesanan' : 'Order History'}</span>
+              <span>{isId ? 'Riwayat Pesanan & Pelacakan' : 'Order History & Tracking'}</span>
               <span className="text-xs font-normal text-muted-light">({orders.length})</span>
             </div>
             <button
@@ -178,6 +202,31 @@ export const AccountPage: React.FC = () => {
               <ArrowRight className="w-3 h-3" />
             </button>
           </div>
+
+          {/* Quick Track Order Lookup Box */}
+          <form onSubmit={handleTrackLookup} className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="w-3.5 h-3.5 text-muted-light absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder={isId ? 'Lacak Pesanan (contoh: NOV-2026-0104 atau Nomor Resi)...' : 'Track Order (e.g. NOV-2026-0104 or Tracking Resi)...'}
+                value={trackLookupInput}
+                onChange={(e) => setTrackLookupInput(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-obsidian/80 border border-white/10 rounded-sm text-xs font-mono text-bone placeholder:text-muted focus:outline-none focus:border-cyan-400 transition-colors"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isSearchingTracking || !trackLookupInput.trim()}
+              className="px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-mono font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors disabled:opacity-50 shrink-0"
+            >
+              {isSearchingTracking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Truck className="w-3.5 h-3.5" />}
+              <span>{isId ? 'Lacak' : 'Track'}</span>
+            </button>
+          </form>
+          {trackingError && (
+            <p className="text-[11px] font-mono text-rose-400 -mt-2">{trackingError}</p>
+          )}
 
           {/* Filter Tabs */}
           {orders.length > 0 && (
@@ -221,133 +270,175 @@ export const AccountPage: React.FC = () => {
               <p>{isId ? 'Tidak ada pesanan pada kategori ini.' : 'No orders matching this filter.'}</p>
             </div>
           ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-              {filteredOrders.map((ord) => (
-                <div
-                  key={ord.id}
-                  className="p-4 bg-obsidian/60 border border-white/10 rounded-sm space-y-3 text-xs font-mono hover:border-white/20 transition-all"
-                >
-                  {/* Card Top Row: Order Number & Badges */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-2.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-sm text-bone">{ord.orderNumber}</span>
-                      <span
-                        className={`text-[10px] px-2 py-0.5 rounded-sm uppercase font-bold border ${
-                          ord.status === 'delivered' || ord.status === 'paid'
-                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                            : ord.status === 'cancelled'
-                            ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
-                            : 'bg-accent-lime/10 text-accent-lime border-accent-lime/30'
-                        }`}
-                      >
-                        {ord.status}
-                      </span>
-                    </div>
+            <div className="space-y-3 max-h-[30rem] overflow-y-auto pr-1">
+              {filteredOrders.map((ord) => {
+                const isDispatched = ord.status === 'shipped' || ord.status === 'delivered';
+                const isProcessing = ord.status === 'processing';
+                const currentIdx = ord.status === 'pending' ? 1 : ord.status === 'paid' ? 2 : ord.status === 'processing' ? 3 : ord.status === 'shipped' ? 4 : ord.status === 'delivered' ? 5 : 0;
 
-                    <div className="flex items-center gap-2 text-[11px] text-muted-light">
-                      <Clock className="w-3.5 h-3.5 text-muted" />
-                      <span>
-                        {new Date(ord.placedAt || ord.createdAt).toLocaleDateString(isId ? 'id-ID' : 'en-US', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </span>
-                    </div>
-                  </div>
+                return (
+                  <div
+                    key={ord.id}
+                    className="p-4 bg-obsidian/60 border border-white/10 rounded-sm space-y-3 text-xs font-mono hover:border-white/20 transition-all"
+                  >
+                    {/* Card Top Row: Order Number & Badges */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-2.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-sm text-bone">{ord.orderNumber}</span>
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-sm uppercase font-bold border ${
+                            ord.status === 'delivered' || ord.status === 'paid'
+                              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                              : ord.status === 'cancelled'
+                              ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+                              : 'bg-accent-lime/10 text-accent-lime border-accent-lime/30'
+                          }`}
+                        >
+                          {ord.status}
+                        </span>
 
-                  {/* Card Middle Row: Items Preview & Shipment */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    {/* Item Thumbnails & Descriptions */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex -space-x-2 shrink-0">
-                        {ord.items.slice(0, 3).map((item, idx) => (
-                          <div
-                            key={item.id || idx}
-                            className="w-10 h-12 rounded-sm border border-white/10 bg-charcoal overflow-hidden shrink-0 shadow-md"
-                          >
-                            {item.imageUrl ? (
-                              <img src={item.imageUrl} alt={item.productName} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-white/5">
-                                <Package className="w-3 h-3 text-muted" />
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                        {(isProcessing || isDispatched) && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-sm uppercase font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                            <span>{ord.status === 'delivered' ? (isId ? 'Tiba di Alamat' : 'Delivered') : (isId ? 'Lacak Kurir' : 'Live Tracking')}</span>
+                          </span>
+                        )}
                       </div>
 
-                      <div className="space-y-0.5 min-w-0">
-                        <div className="font-bold text-bone truncate text-xs">
-                          {ord.items[0]?.productName || 'NOVAÉ Garment'}
-                          {ord.items.length > 1 && (
-                            <span className="text-muted-light font-normal text-[11px] ml-1">
-                              (+{ord.items.length - 1} {isId ? 'lainnya' : 'more'})
-                            </span>
+                      <div className="flex items-center gap-2 text-[11px] text-muted-light">
+                        <Clock className="w-3.5 h-3.5 text-muted" />
+                        <span>
+                          {new Date(ord.placedAt || ord.createdAt).toLocaleDateString(isId ? 'id-ID' : 'en-US', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Mini Milestone Progress Bar */}
+                    {ord.status !== 'cancelled' && (
+                      <div className="py-1">
+                        <div className="flex items-center justify-between text-[10px] text-muted-light pb-1">
+                          <span className={currentIdx >= 1 ? 'text-accent-lime font-bold' : ''}>1. Dipesan</span>
+                          <span className={currentIdx >= 2 ? 'text-accent-lime font-bold' : ''}>2. Lunas</span>
+                          <span className={currentIdx >= 3 ? 'text-accent-lime font-bold' : ''}>3. Proses Atelier</span>
+                          <span className={currentIdx >= 4 ? 'text-accent-lime font-bold' : ''}>4. Dikirim</span>
+                          <span className={currentIdx >= 5 ? 'text-emerald-400 font-bold' : ''}>5. Tiba</span>
+                        </div>
+                        <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden flex">
+                          <div
+                            className="bg-accent-lime h-full transition-all duration-500"
+                            style={{ width: `${(currentIdx / 5) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Card Middle Row: Items Preview & Shipment */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      {/* Item Thumbnails & Descriptions */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex -space-x-2 shrink-0">
+                          {ord.items.slice(0, 3).map((item, idx) => (
+                            <div
+                              key={item.id || idx}
+                              className="w-10 h-12 rounded-sm border border-white/10 bg-charcoal overflow-hidden shrink-0 shadow-md"
+                            >
+                              {item.imageUrl ? (
+                                <img src={item.imageUrl} alt={item.productName} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-white/5">
+                                  <Package className="w-3 h-3 text-muted" />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="font-bold text-bone truncate text-xs">
+                            {ord.items[0]?.productName || 'NOVAÉ Garment'}
+                            {ord.items.length > 1 && (
+                              <span className="text-muted-light font-normal text-[11px] ml-1">
+                                (+{ord.items.length - 1} {isId ? 'lainnya' : 'more'})
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-muted-light">
+                            {ord.items.reduce((s, i) => s + i.quantity, 0)} {isId ? 'potong busana' : 'pieces total'}
+                          </div>
+                          {ord.shipment?.trackingNumber && (
+                            <div className="text-[10px] text-cyan-400 flex items-center gap-1 pt-0.5">
+                              <Truck className="w-3 h-3" />
+                              <span>{ord.shipment.courier || 'Kurir'}: <strong className="font-mono">{ord.shipment.trackingNumber}</strong></span>
+                            </div>
                           )}
                         </div>
-                        <div className="text-[10px] text-muted-light">
-                          {ord.items.reduce((s, i) => s + i.quantity, 0)} {isId ? 'potong busana' : 'pieces total'}
-                        </div>
-                        {ord.shipment?.trackingNumber && (
-                          <div className="text-[10px] text-cyan-400 flex items-center gap-1 pt-0.5">
-                            <Truck className="w-3 h-3" />
-                            <span>Resi: {ord.shipment.trackingNumber}</span>
-                          </div>
+                      </div>
+
+                      {/* Financial Total */}
+                      <div className="text-left sm:text-right shrink-0">
+                        <span className="text-[10px] text-muted block uppercase">{isId ? 'Total Pesanan' : 'Total Settled'}</span>
+                        <span className="text-sm font-bold text-accent-lime block">{formatIDR(ord.totalIdr)}</span>
+                      </div>
+                    </div>
+
+                    {/* Card Bottom Actions */}
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted uppercase">Pembayaran:</span>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded-sm uppercase font-bold border ${
+                            ord.paymentStatus === 'paid'
+                              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                              : ord.paymentStatus === 'failed'
+                              ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+                              : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                          }`}
+                        >
+                          {ord.paymentStatus}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {/* Live Tracking / Detail Button */}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDetailOrder(ord)}
+                          className="px-3 py-1.5 rounded-sm bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+                        >
+                          <Truck className="w-3.5 h-3.5" />
+                          <span>{isId ? 'Lacak Pengiriman' : 'Track Order'}</span>
+                        </button>
+
+                        {/* View Details Button */}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDetailOrder(ord)}
+                          className="px-3 py-1.5 rounded-sm bg-white/5 hover:bg-white/10 text-bone hover:text-white border border-white/10 text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-muted-light" />
+                          <span>{isId ? 'Detail' : 'Detail'}</span>
+                        </button>
+
+                        {/* Pay / Simulate Button for Pending */}
+                        {(ord.status === 'pending' || ord.paymentStatus === 'failed') && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPaymentOrder(ord)}
+                            className="px-3 py-1.5 rounded-sm bg-accent-lime hover:bg-accent-lime/90 text-obsidian text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow-sm"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                            <span>{isId ? 'Bayar / Simulasi' : 'Pay / Simulate'}</span>
+                          </button>
                         )}
                       </div>
                     </div>
-
-                    {/* Financial Total */}
-                    <div className="text-left sm:text-right shrink-0">
-                      <span className="text-[10px] text-muted block uppercase">{isId ? 'Total Pesanan' : 'Total Settled'}</span>
-                      <span className="text-sm font-bold text-accent-lime block">{formatIDR(ord.totalIdr)}</span>
-                    </div>
                   </div>
-
-                  {/* Card Bottom Actions */}
-                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-muted uppercase">Pembayaran:</span>
-                      <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded-sm uppercase font-bold border ${
-                          ord.paymentStatus === 'paid'
-                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                            : ord.paymentStatus === 'failed'
-                            ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
-                            : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-                        }`}
-                      >
-                        {ord.paymentStatus}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {/* View Details Button */}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDetailOrder(ord)}
-                        className="px-3 py-1.5 rounded-sm bg-white/5 hover:bg-white/10 text-bone hover:text-white border border-white/10 text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5 text-muted-light" />
-                        <span>{isId ? 'Detail Pesanan' : 'Order Detail'}</span>
-                      </button>
-
-                      {/* Pay / Simulate Button for Pending */}
-                      {(ord.status === 'pending' || ord.paymentStatus === 'failed') && (
-                        <button
-                          type="button"
-                          onClick={() => setSelectedPaymentOrder(ord)}
-                          className="px-3 py-1.5 rounded-sm bg-accent-lime hover:bg-accent-lime/90 text-obsidian text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow-sm"
-                        >
-                          <CreditCard className="w-3.5 h-3.5" />
-                          <span>{isId ? 'Bayar / Simulasi' : 'Pay / Simulate'}</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -330,6 +330,10 @@ export async function apiGetOrderById(token: string, orderId: string, lang: stri
   return fetchWithAuth<FrontendOrder>(`/orders/${orderId}?lang=${lang}`, token);
 }
 
+export async function apiTrackOrder(orderNumber: string, lang: string = 'id') {
+  return fetchWithAuth<FrontendOrder>(`/orders/track/${encodeURIComponent(orderNumber.trim())}?lang=${lang}`);
+}
+
 export interface SimulatePaymentPayload {
   scenario: 'success' | 'failed' | 'cancel';
   method?: string;

@@ -65,6 +65,19 @@ export class OrdersController {
     return this.ordersService.getUserOrders(user, lang);
   }
 
+  @Get('track/:orderNumber')
+  @ApiOperation({ summary: 'Public order tracking lookup by order number' })
+  @ApiParam({ name: 'orderNumber', description: 'Order number (e.g. NOV-2026-0104)' })
+  @ApiQuery({ name: 'lang', enum: LanguageCode, required: false, description: 'Language code (default: id)' })
+  @ApiResponse({ status: 200, description: 'Order tracking details', type: OrderResponseDto })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  async trackOrderByNumber(
+    @Param('orderNumber') orderNumber: string,
+    @Query('lang') lang?: LanguageCode,
+  ): Promise<OrderResponseDto> {
+    return this.ordersService.trackOrderByNumber(orderNumber, lang);
+  }
+
   @Get(':id')
   @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
